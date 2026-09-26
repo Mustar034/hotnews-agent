@@ -1,0 +1,19 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# 环境变量（可能包含 API Key）
+.env
+.env.*
+
+# 运行时生成的调研报告（*.md 但保留 README）
+*.md
+!README.md
+!hotnews/README.md
+
+# 临时文件
+*.log
+tmp/
