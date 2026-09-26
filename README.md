@@ -194,25 +194,6 @@ config ← llm ← intent ─┐
 
 ---
 
-## 🔒 开源安全提醒（重要）
-
-`config.py` 中硬编码了一个测试用的 DeepSeek API Key。**开源发布前请务必删除该默认值**，只保留环境变量读取：
-
-```python
-# 修改前
-API_KEY = os.environ.get("LLM_API_KEY", "sk-这里是测试key，请删除")
-
-# 修改后
-API_KEY = os.environ.get("LLM_API_KEY", "")
-```
-
-同时建议：
-
-- 在 `.gitignore` 中添加 `.env`、`*.md`（生成的调研报告）等运行时产物
-- 若曾将含 Key 的代码推送过远端，请到 DeepSeek 控制台**吊销并重新生成 Key**
-
----
-
 ## 📄 开源协议
 
 本项目采用 **MIT License**，欢迎 Fork / PR / Issue。
