@@ -1,10 +1,39 @@
 """全局配置。"""
 import os
 
+
+def _load_dotenv():
+    """轻量 .env 加载：读取项目根目录 .env 的 KEY=VALUE（环境变量已设置则优先环境变量）。
+
+    敏感信息（API Key / 各平台 Cookie）请放入 .env，切勿写进代码或提交到 git。
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(root, ".env")
+    try:
+        with open(env_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k:
+                    os.environ.setdefault(k, v)
+    except OSError:
+        pass
+
+
+_load_dotenv()
+
 # ---- DeepSeek API ----
-API_KEY = os.environ.get("LLM_API_KEY", "sk-yourkey")
+API_KEY = os.environ.get("LLM_API_KEY", "sk-yourkey")   # 真实 Key 请放 .env 的 LLM_API_KEY
 BASE_URL = "https://api.deepseek.com"      # DeepSeek 官方 OpenAI 兼容端点
 MODEL = "deepseek-chat"                    # DeepSeek-V3；需要推理可换 deepseek-reasoner
+
+# ---- 平台登录 Cookie（可选，用于微博热搜 / 知乎热榜，放 .env）----
+WEIBO_COOKIE = os.environ.get("WEIBO_COOKIE", "")
+ZHIHU_COOKIE = os.environ.get("ZHIHU_COOKIE", "")
 
 # ---- 调研参数 ----
 SEARCH_LIMIT = 5                           # 每个 Worker 取前几条搜索结果
@@ -50,7 +79,7 @@ EXIT_WORDS = (
 GREETING = (
     "你好，我有什么能帮您的吗？我可以：\n"
     "  · 整理热点资讯：\"给我今天的热点总结\"、\"本周生物领域的科研热点\"\n"
-    "  · 看榜单：\"今天十大热点\"、\"B站热榜前十\"（历史榜单会自动转成新闻调研）\n"
+    "  · 看榜单：\"今天十大热点\"、\"B站热榜前十\"、\"微博热榜\"、\"知乎热榜\"（历史榜单会自动转成新闻调研）\n"
     "  · 查天气：\"明天会下雨吗\"、\"西安明天什么天气\"\n"
     "  · 算日子：\"明天是周几\"、\"还有几天到国庆节\"\n"
     "  · 解闷：\"讲个笑话\"、\"猜个谜语\"\n"

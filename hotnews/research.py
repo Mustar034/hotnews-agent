@@ -1,11 +1,13 @@
-"""调研引擎：拆解 → 并行 Worker → 汇总 → 写报告。
+"""调研引擎：拆解 → 并行 Worker → 汇总 → 速递/报告。
 
 流程：build_scenario 组装场景 → decompose 拆子问题 → ThreadPoolExecutor
 并行跑 research_worker（每 Worker 三层搜索 + LLM 提炼）→ synthesize 汇总。
+run_research 返回速递+完整报告文本（不写文件），save_report 负责落盘。
 """
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from . import digest
 from .config import MAX_WORKERS, SEARCH_LIMIT
 from .llm import call_llm, parse_json_llm
 from .search import fetch_hackernews, fetch_hackernews_query, fetch_sspai, search
@@ -110,10 +112,13 @@ def research_worker(item, scenario: dict) -> dict:
             "1. 只写搜索结果里出现的事实，不编造、不推测；\n"
             "2. 明确区分『已确认事实』和『传闻/未经证实』；\n"
             "3. 每条要点一句话，最多 5 条，注明日期（如『9月24日』）；没有明确日期的标注『日期不详』；\n"
-            "4. 只输出 JSON：{\"subtopic\": \"...\", \"key_points\": [\"...\"], \"sources\": [\"url\"]}；\n"
-            "5. sources 必须来自上面真实出现的 URL；\n"
-            "6. 若搜索结果与子问题相关，即使没有近期新闻，也应提炼出与该主题相关的背景要点并注明日期；"
-            "只有完全无关时才输出空数组。"
+            f"4. 调研时间范围是：{time_expr(scenario['date_range'])}。优先提炼该范围内的信息；"
+            "日期明显早于范围开始（超过3天）的要点，结尾必须标注『（背景，非本期）』，不能作为本期热点核心；\n"
+            "5. 只输出 JSON：{\"subtopic\": \"...\", \"key_points\": [\"...\"], \"sources\": [\"url\"]}；\n"
+            "6. sources 必须来自上面真实出现的 URL；\n"
+            "7. 若搜索结果与子问题相关，即使没有近期新闻，也应提炼出与该主题相关的背景要点并注明日期；"
+            "只有完全无关时才输出空数组。注意：平台登录页/功能页/客服页/无关产品页等与主题无关的内容，必须视为无关并输出空数组，"
+            "不得硬凑要点。"
         )
         raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}")
         data = parse_json_llm(raw, fallback={"key_points": [], "sources": []})
@@ -142,8 +147,11 @@ def synthesize(results: list[dict], scenario: dict) -> str:
     return call_llm(sys_p, json.dumps(results, ensure_ascii=False, indent=2), temperature=0.5)
 
 
-def run_scenario(scenario: dict) -> str:
-    """执行一次完整调研：拆解 → 并行 Worker → 汇总 → 写文件。"""
+def run_research(scenario: dict) -> dict:
+    """执行一次完整调研：拆解 → 并行 Worker → 汇总。
+
+    返回 {"digest", "report", "file_name"}（不写文件），由调用方决定是否落盘。
+    """
     print(f"[任务] {scenario['title']}（时间范围：{time_expr(scenario['date_range'])}）")
     print("[主Agent] 拆解任务...")
     subtopics = decompose(scenario)
@@ -164,6 +172,15 @@ def run_scenario(scenario: dict) -> str:
     print("[汇总Agent] 生成报告...")
     report = synthesize(results, scenario)
 
+    return {
+        "digest": digest.make_research_digest(results, scenario),
+        "report": report,
+        "file_name": scenario["file_name"],
+    }
+
+
+def save_report(scenario: dict, report: str) -> str:
+    """把调研报告文本写入 md 文件，返回文件路径。"""
     out_path = scenario["file_name"]
     # 避免标题重复：LLM 自带 "# 标题" 时不再叠加脚本标题
     report = report.lstrip()

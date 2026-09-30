@@ -96,7 +96,7 @@ INTENT_SYSTEM = """你是资讯调研助手的意图解析器。判断用户意�
   "intent": "hotlist" 或 "research" 或 "chat",
   "topic": "要调研的主题（中文，去掉时间词和"热点/新闻/总结"等泛词；hotlist 可为空）",
   "topic_en": "主题的英文关键词（2~5个单词，小写，用于英文搜索源，如 gene editing / artificial intelligence）",
-  "source": "榜单平台：bing/必应 或 baidu/百度 或 weibo/微博 或 bilibili/B站，可为空（仅 hotlist 需要）",
+  "source": "榜单平台：bing/必应 或 baidu/百度 或 weibo/微博 或 zhihu/知乎 或 bilibili/B站，可为空（仅 hotlist 需要）",
   "count": "榜单条数（用户说"前100/TOP50/20个"时填对应数字；没提就填10；仅 hotlist 需要）",
   "topic_slug": "3-8个字母的英文标识，用于文件名，如 ai/biology/tech/general/bing/baidu，小写无空格",
   "time_window": "时间范围：今天 / 本周 / 上周 / 本月 / 近N天（N为数字）",
@@ -104,10 +104,11 @@ INTENT_SYSTEM = """你是资讯调研助手的意图解析器。判断用户意�
   "subtopics": ["拆分角度1", "拆分角度2", "拆分角度3"]（3~5个，用于分头调研）
 }
 
-规则：
+规则（优先级从高到低）：
+- 包含"总结/资讯/盘点/整理/汇总/综述/热点新闻/热点资讯"等词（无论是否含"热榜/热搜"）→ intent=research（资讯总结类）
+- 仅包含"热搜榜/热榜/TOP/前N/排名/榜单/排行/最热"等榜单词，且不含上述总结类词 → intent=hotlist
 - 用户没提时间范围时，time_window 默认"今天"
-- 包含"热搜/热榜/十大/TOP/排名/榜单/排行/最热"等词 → intent=hotlist
-- hotlist 类：topic_slug 取平台（bing/baidu/bilibili），title 如"今日十大热点"
+- hotlist 类：topic_slug 取平台（bing/baidu/weibo/zhihu/bilibili），title 如"今日十大热点"
 - intent=chat 时，其余字段可为空字符串
 - 只输出 JSON，不要任何解释"""
 
@@ -115,8 +116,46 @@ SOURCE_SLUG_MAP = {
     "bing": "bing", "必应": "bing",
     "baidu": "baidu", "百度": "baidu",
     "weibo": "weibo", "微博": "weibo",
-    "bili": "bilibili", "b站": "bilibili",
+    "zhihu": "zhihu", "知乎": "zhihu",
+    "bili": "bilibili", "b站": "bilibili", "哔哩哔哩": "bilibili",
 }
+
+# 平台名 → 热榜源（"XX平台热点资讯"类请求，热榜才是该平台真实热点）
+PLATFORM_WORDS = {
+    "微博": "weibo", "知乎": "zhihu", "百度": "baidu", "必应": "bing",
+    "b站": "bilibili", "哔哩哔哩": "bilibili",
+}
+
+_TOPIC_GENERIC = re.compile(
+    r"今天|今日|昨天|昨日|前天|本周|上周|本月|上月|近\d+天|热点|资讯|新闻|总结|盘点|汇总|整理|动态|综述|报道|给我|关于|的|领域|方向|内容"
+)
+
+
+def _redirect_platform_to_hotlist(topic: str, source: str, time_window: str) -> dict | None:
+    """research 主题若清洗后只剩平台名 → 转 hotlist。
+
+    原因：搜索源（Bing/HN/少数派）拿不到微博/知乎等平台站内数据，
+    该平台真实热点就是热榜。如"微博热点资讯总结"→ 微博热榜。
+    """
+    # 1) LLM 已给出平台 source 字段（如把"微博热榜"分到 research）→ 直接转
+    if source:
+        for k, v in SOURCE_SLUG_MAP.items():
+            if k in source:
+                return {
+                    "intent": "hotlist", "source": source, "count": 10,
+                    "topic_slug": v, "time_window": time_window,
+                    "title": f"{source}今日热点",
+                }
+    # 2) 主题清洗后只剩平台名
+    cleaned = _TOPIC_GENERIC.sub("", topic or "").strip()
+    for plat, slug in PLATFORM_WORDS.items():
+        if plat in cleaned:
+            return {
+                "intent": "hotlist", "source": plat, "count": 10,
+                "topic_slug": slug, "time_window": time_window,
+                "title": f"{plat}今日热点",
+            }
+    return None
 
 
 def parse_intent(user_input: str) -> dict:
@@ -151,9 +190,13 @@ def parse_intent(user_input: str) -> dict:
             "title": (data.get("title") or "今日十大热点").strip() or "今日十大热点",
         }
 
+    topic = (data.get("topic") or "全网热点").strip() or "全网热点"
+    redirect = _redirect_platform_to_hotlist(topic, data.get("source") or "", data.get("time_window") or "今天")
+    if redirect:
+        return redirect
     return {
         "intent": "research",
-        "topic": (data.get("topic") or "全网热点").strip() or "全网热点",
+        "topic": topic,
         "topic_en": (data.get("topic_en") or "").strip(),
         "topic_slug": re.sub(r"[^a-z]", "", (data.get("topic_slug") or "general").lower())[:8] or "general",
         "time_window": data.get("time_window") or "今天",

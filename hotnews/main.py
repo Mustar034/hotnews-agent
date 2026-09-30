@@ -8,7 +8,7 @@
 """
 import sys
 
-from . import facts, fun, hotlists, intent, research, weather
+from . import digest, facts, fun, hotlists, intent, research, weather
 from .config import EXIT_WORDS, GREETING
 
 # 快捷命令（非对话模式）
@@ -57,6 +57,33 @@ def answer_daily(q: dict) -> str:
             return weather.rain_answer(q["city"], q["day"], city_kind)
         return weather.weather_answer(q["city"], q["day"], city_kind)
     return "这个问题我暂时还不会，您可以换个说法试试。"
+
+
+def _hotlist_topic(parsed: dict) -> str:
+    """榜单速递的标题主题：按来源平台命名，避免带上数量（如"前5"）。"""
+    source = parsed.get("source", "")
+    if "weibo" in source or "微博" in source:
+        return "微博热榜"
+    if "zhihu" in source or "知乎" in source:
+        return "知乎热榜"
+    if "bili" in source or "b站" in source:
+        return "B站热榜"
+    if "baidu" in source or "百度" in source:
+        return "百度热榜"
+    if "bing" in source or "必应" in source:
+        return "今日热点"
+    return "今日热点"
+
+
+def _ask_report() -> bool:
+    """速递输出后询问是否需要生成完整报告。回车默认生成；明确否定才跳过。"""
+    try:
+        ans = input("是否需要生成完整报告，以便查看详情？[回车=要 / 输入\"不要\"跳过] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        return True
+    if ans in ("不要", "不用", "不需要", "不用了", "否", "不", "no", "n", "不生成", "算了", "不用生成", "跳过"):
+        return False
+    return True
 
 
 def chat_loop() -> None:
@@ -134,28 +161,46 @@ def chat_loop() -> None:
                     "title": f"{window}热点新闻整理",
                     "subtopics": ["国内热点事件", "国际热点事件", "科技动态", "财经动态"],
                 }
-                try:
-                    out = research.run_scenario(research.build_scenario(research_intent))
-                    print(f"[Agent] 完成！报告已保存：{out}。还有什么需要帮忙的吗？")
-                except Exception as e:
-                    print(f"[Agent] 抱歉，执行失败了：{e}。可以试试换个时间范围。")
+                _run_research_flow(research_intent)
                 continue
 
             print("[Agent] 好的，正在为您抓取榜单，请稍候...")
             try:
-                out = hotlists.run_hotlist(parsed)
-                print(f"[Agent] 完成！榜单已保存：{out}。还有什么需要帮忙的吗？")
+                data = hotlists.fetch_hotlist(parsed)
+                print()
+                print(digest.make_hotlist_digest(data, _hotlist_topic(parsed)))
+                if not data["sections"]:
+                    # 无数据：直接落失败报告留档，不再询问
+                    hotlists.write_hotlist(data)
+                    continue
+                if _ask_report():
+                    out = hotlists.write_hotlist(data)
+                    print(f"[Agent] 完成！榜单报告已保存：{out}。还有什么需要帮忙的吗？")
+                else:
+                    print(f"[Agent] 好的，速递就到这里。还有什么需要帮忙的吗？")
             except Exception as e:
                 print(f"[Agent] 抱歉，榜单抓取失败了：{e}")
             continue
 
         # 资讯调研
-        print("[Agent] 好的，正在为您整理，请稍候...")
-        try:
-            out = research.run_scenario(research.build_scenario(parsed))
+        _run_research_flow(parsed)
+
+
+def _run_research_flow(parsed: dict) -> None:
+    """资讯调研流程：调研 → 输出速递 → 询问是否生成完整报告。"""
+    print("[Agent] 好的，正在为您整理，请稍候...")
+    try:
+        scenario = research.build_scenario(parsed)
+        result = research.run_research(scenario)
+        print()
+        print(result["digest"])
+        if _ask_report():
+            out = research.save_report(scenario, result["report"])
             print(f"[Agent] 完成！报告已保存：{out}。还有什么需要帮忙的吗？")
-        except Exception as e:
-            print(f"[Agent] 抱歉，执行失败了：{e}。您可以换个主题试试。")
+        else:
+            print(f"[Agent] 好的，速递就到这里。还有什么需要帮忙的吗？")
+    except Exception as e:
+        print(f"[Agent] 抱歉，执行失败了：{e}。您可以换个主题试试。")
 
 
 def _chat_reply(user_input: str) -> str:
@@ -172,7 +217,9 @@ def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] in PRESET_INTENTS:
         intent_data = PRESET_INTENTS[sys.argv[1]]
         try:
-            research.run_scenario(research.build_scenario(intent_data))
+            scenario = research.build_scenario(intent_data)
+            result = research.run_research(scenario)
+            research.save_report(scenario, result["report"])
         except Exception as e:
             print(f"[Agent] 执行失败：{e}")
     else:
