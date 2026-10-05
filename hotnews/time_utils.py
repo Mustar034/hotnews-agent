@@ -63,3 +63,22 @@ def clean_time_words(text: str) -> str:
     for w in ("今天", "今日", "本周", "上周", "这个星期", "本月", "这个月", "近三天", "近七天"):
         text = text.replace(w, "")
     return re.sub(r"\s+", " ", text).strip()
+
+
+def point_date(kp: str) -> str | None:
+    """从要点文本提取日期，返回 'YYYY-MM-DD'；提取不到返回 None。
+
+    支持：2026年10月5日 / 10月5日 / 10-05 / 10/5（月日默认当年）。
+    """
+    m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", kp)
+    if m:
+        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    m = re.search(r"(?<!\d)(\d{1,2})月(\d{1,2})日(?!\d)", kp)
+    if m:
+        y = datetime.now().year
+        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    m = re.search(r"(?<!\d)(\d{1,2})[-/](\d{1,2})(?!\d)", kp)
+    if m and int(m.group(1)) <= 12:  # 形如 10-05 的日期，避免误伤
+        y = datetime.now().year
+        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    return None

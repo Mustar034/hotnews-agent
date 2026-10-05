@@ -16,7 +16,7 @@ import contextvars
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from . import digest
 from .budget import BudgetExceeded
@@ -24,51 +24,47 @@ from .config import MAX_WORKERS, SEARCH_LIMIT
 from .events import say
 from .llm import call_llm, call_llm_json, parse_json_llm
 from .search import fetch_hackernews, fetch_hackernews_query, fetch_sspai, search
-from .time_utils import clean_time_words, date_range_of, normalize_window, time_expr
+from .time_utils import clean_time_words, date_range_of, normalize_window, point_date, time_expr
 
 # 单日窗口：key_points 里出现这些字样直接剔除（LLM 标记的背景条目）
 _BACKGROUND_MARKERS = ("背景，非本期", "背景,非本期", "非本期", "背景条目")
 
 
-def _point_date(kp: str) -> str | None:
-    """从要点文本提取日期，返回 'YYYY-MM-DD'；提取不到返回 None。
-
-    支持：2026年10月5日 / 10月5日 / 10-05 / 10/5（月日默认当年）。
-    """
-    m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", kp)
-    if m:
-        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-    m = re.search(r"(?<!\d)(\d{1,2})月(\d{1,2})日(?!\d)", kp)
-    if m:
-        y = datetime.now().year
-        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
-    m = re.search(r"(?<!\d)(\d{1,2})[-/](\d{1,2})(?!\d)", kp)
-    if m and int(m.group(1)) <= 12:  # 形如 10-05 的日期，避免误伤
-        y = datetime.now().year
-        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
-    return None
-
-
-def _filter_single_day(results: list[dict], window_date: datetime) -> list[dict]:
+def _filter_single_day(results: list[dict], window_date: datetime,
+                       allow_prev_days: int = 1) -> list[dict]:
     """确定性兜底：单日窗口只保留『当天』要点，剔除旧日期与背景标注。
 
-    不依赖 LLM 自觉（LLM 提炼规则可能被绕过）：凡要点中解析出日期且不是
-    window_date，或含背景标记，一律从 key_points 剔除；没有明确日期的要点
-    也剔除（单日窗口无法证明它是当天的，宁缺毋滥）。
+    两级策略（解决"周一早上当天新闻少导致全空"的现实问题）：
+      1. 严格：凡要点中解析出日期且不是 window_date，或含背景标记，一律剔除；
+         没有明确日期的要点也剔除（单日窗口无法证明它是当天的，宁缺毋滥）；
+      2. 若严格后所有 worker 的当天要点为 0，放宽到最近 allow_prev_days 天
+         （保留明确日期在窗口日±[0,allow_prev_days] 内的要点），并给每个
+         result 附加 _single_day_note="relaxed"，供速递如实标注"含最近N天"。
+    不依赖 LLM 自觉（LLM 提炼规则可能被绕过）。
     """
     want = f"{window_date:%Y-%m-%d}"
-    kept = []
-    for r in results:
+    relaxed_min = f"{(window_date - timedelta(days=allow_prev_days)):%Y-%m-%d}"
+
+    def clean(r: dict, lo: str, hi: str) -> dict:
         kps = []
         for kp in r.get("key_points", []):
             if any(mark in kp for mark in _BACKGROUND_MARKERS):
                 continue
-            d = _point_date(kp)
-            if d is None or d != want:  # 无日期或非当天 → 单日窗口一律不要
+            d = point_date(kp)
+            if d is None:
                 continue
-            kps.append(kp)
-        kept.append({**r, "key_points": kps[:5]})
-    return kept
+            if lo <= d <= hi:
+                kps.append(kp)
+        return {**r, "key_points": kps[:5]}
+
+    strict = [clean(r, want, want) for r in results]
+    if any(r["key_points"] for r in strict):
+        return strict
+    # 放宽：保留明确日期在最近 allow_prev_days 天内的要点
+    relaxed = [clean(r, relaxed_min, want) for r in results]
+    for r in relaxed:
+        r["_single_day_note"] = "relaxed"
+    return relaxed
 
 
 def build_scenario(intent: dict) -> dict:
