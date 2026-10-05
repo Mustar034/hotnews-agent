@@ -27,9 +27,11 @@ def _load_dotenv():
 _load_dotenv()
 
 # ---- DeepSeek API ----
-API_KEY = os.environ.get("LLM_API_KEY", "sk-yourkey")   # 真实 Key 请放 .env 的 LLM_API_KEY
+# 安全：不再内置任何默认 Key。未配置时 llm.call_llm 会抛出明确错误并提示配置方式。
+API_KEY = os.environ.get("LLM_API_KEY") or None   # 真实 Key 请放 .env 的 LLM_API_KEY
 BASE_URL = "https://api.deepseek.com"      # DeepSeek 官方 OpenAI 兼容端点
 MODEL = "deepseek-chat"                    # DeepSeek-V3；需要推理可换 deepseek-reasoner
+LLM_TIMEOUT = 60                           # LLM 请求超时（秒），比普通网络请求更长
 
 # ---- 平台登录 Cookie（可选，用于微博热搜 / 知乎热榜，放 .env）----
 WEIBO_COOKIE = os.environ.get("WEIBO_COOKIE", "")
@@ -39,6 +41,14 @@ ZHIHU_COOKIE = os.environ.get("ZHIHU_COOKIE", "")
 SEARCH_LIMIT = 5                           # 每个 Worker 取前几条搜索结果
 MAX_WORKERS = 3                            # 并行 Worker 数
 REQUEST_TIMEOUT = 30                       # 网络请求超时（秒）
+
+# ---- 预算与成本控制（防失控：LLM 调用计数 + 任务/会话上限）----
+MAX_LLM_CALLS_PER_SESSION = 40             # 单次会话 LLM 调用总上限（聊天+任务）
+MAX_LLM_CALLS_PER_TASK = 14                # 单个任务 LLM 调用上限（意图+拆解+Worker+汇总+速递+反思）
+MAX_REFLECT_ROUNDS = 1                     # 反思纠错最大轮数（每轮只重试缺失子问题）
+MAX_JSON_RETRIES = 1                       # LLM JSON 解析失败最大重试次数
+MAX_NETWORK_RETRIES = 1                    # LLM 网络失败最大重试次数
+TRACE_SHOWN = True                         # 是否在终端展示执行轨迹（可解释性开关，可关）
 
 # ---- 默认城市（用户所在地，天气查询兜底）----
 DEFAULT_CITY = "西安"
@@ -67,6 +77,14 @@ CITY_CODES = {
     "嘉兴": "101210301", "泉州": "101230501", "漳州": "101230601", "包头": "101080201",
     "吉林市": "101060201", "大庆": "101050901", "秦皇岛": "101091101",
 }
+
+# ---- 会话记录与退出 ----
+CONVERSATION_DIR = "conversations"        # 对话记录根目录（相对当前工作目录）
+AUTO_CLOSE_TERMINAL = True                # 结束对话后延时自动关闭终端（设为 False 可关闭）
+CLOSE_DELAY_SECONDS = 10                  # 结束语后等待秒数再关闭终端
+# 环境变量 HOTNEWS_NO_AUTOCLOSE=1 可临时禁用自动关终端（测试/IDE 运行时用）
+if os.environ.get("HOTNEWS_NO_AUTOCLOSE", "") in ("1", "true", "True"):
+    AUTO_CLOSE_TERMINAL = False
 
 # ---- 对话 ----
 EXIT_WORDS = (

@@ -16,6 +16,10 @@
 | 📅 日期计算 | 周几 / 当前日期 / 节日倒计时（确定性计算） | "明天是周几"、"还有几天到国庆节" |
 | 😄 趣味互动 | 讲笑话、猜谜语（带提示的交互式）、颜文字 | "讲个笑话"、"猜个谜语" |
 | 🕐 时间意识 | 今天/昨天/前天/本周/上周/本月/近N天，自动映射日期范围 | "昨天十大热点"、"近三天生物领域科研热点" |
+| 🧠 多轮记忆 | 记住最近话题/报告/榜单；理解"第二条""刚才那个报告"等指代；承前省略句（"哈尔滨明天什么天气"→"西安呢？"自动补全） | "再详细讲讲第二条"、"西安呢？" |
+| 🔍 反思纠错 | 调研后检查子问题覆盖率，缺失项自动换关键词重试 | 部分子问题无结果时自动补搜并重新汇总 |
+| 💰 成本预算 | 会话/任务两级 LLM 调用上限，超限自动收敛并说明 | 退出时输出调用次数与估算费用 |
+| 💾 会话记录 | 每次对话自动存档为 markdown，文件夹按"开始~结束时间"命名 | 退出时提示保存路径；下次启动自动开启新一轮 |
 | 🤝 诚实降级 | 做不到的事说明原因并给替代方案，绝不假装成功 | 热榜无历史数据 → 自动转资讯调研；未知城市 → 提示支持列表 |
 
 ---
@@ -33,7 +37,7 @@ pip install requests beautifulsoup4
 
 ### 配置 API Key
 
-DeepSeek API Key 通过环境变量注入（**代码内置了测试用的默认值，开源使用请务必删除，见下文"开源安全提醒"**）：
+DeepSeek API Key 通过环境变量注入（**代码不内置任何默认 Key，未配置时程序会明确提示**）：
 
 ```bash
 # Windows PowerShell
@@ -42,6 +46,8 @@ $env:LLM_API_KEY = "sk-你的key"
 # Linux / macOS
 export LLM_API_KEY="sk-你的key"
 ```
+
+也可在项目根目录 `.env` 中填写 `LLM_API_KEY=sk-你的key`（已自动加载，`.env` 已被 gitignore）。
 
 ### 运行
 
@@ -54,9 +60,36 @@ python -m hotnews monthly    # 快捷：本月 OpenAI 动态
 
 生成的报告为 Markdown 文件，保存在当前工作目录，文件名规范：`{时间}_{主题}_{起始日期}.md`，如 `weekly_ai_2026-09-21.md`。
 
+### 会话记录与退出
+
+- **自动存档**：每次对话（从启动到退出）完整记录为 `conversations/{开始时间}~{结束时间}/对话记录.md`，含每轮用户输入与 Agent 输出（含计划/轨迹中间过程）。
+- **新一轮对话**：每次启动程序都会自动创建新的会话文件夹、重置记忆——上一次对话不影响下一次。
+- **结束语与自动关终端**：退出时由 LLM 生成一句有变化的道别语（含随机颜文字；LLM 不可用或预算耗尽时自动降级为模板库），并提示保存路径；默认 10 秒后自动关闭终端窗口（Windows，仅当父进程是 cmd/powershell 等终端宿主时，避免误杀 IDE）。
+- 配置：`CONVERSATION_DIR` 记录目录、`CLOSE_DELAY_SECONDS` 关闭延时、`AUTO_CLOSE_TERMINAL=False` 或环境变量 `HOTNEWS_NO_AUTOCLOSE=1` 可禁用自动关闭（IDE/测试场景）。
+
 ---
 
 ## 🧠 实现逻辑
+
+### Agent 五阶段循环（agent_core.py）
+
+每次任务类请求（调研/榜单/天气/聊天）显式走五阶段，六项 Agent 能力逐一落点：
+
+```mermaid
+flowchart TD
+    A[UNDERSTAND 读懂目标<br/>规则层优先→LLM意图→信息不足澄清] --> B[PLAN 拆分计划<br/>生成步骤并展示 支持只要前N项]
+    B --> C[EXECUTE 调用工具<br/>统一工具注册表 记录轨迹]
+    C --> D[REFLECT 反思纠错<br/>覆盖率检查 缺失项换关键词重试]
+    D --> E[FINISH 判断何时结束<br/>达标或预算耗尽→收敛 记忆入库]
+```
+
+| 阶段 | 能力落点 | 实现 |
+| --- | --- | --- |
+| UNDERSTAND | 读懂目标 | 规则层零成本拦截（天气/周几/日期）→ LLM 三类意图（research/hotlist/chat）；输入无实质主题时**澄清追问**而非静默执行；多轮指代（"第二条"）经 memory 解析后理解 |
+| PLAN | 拆分计划 | research 拆 3~5 子问题（含搜索关键词）并展示给用户；支持"只要前2项"截断；同一任务的拆解只调一次 LLM |
+| EXECUTE | 调用工具 | tools.py 统一工具注册表（元数据/来源/成本级别），所有调用记录执行轨迹；多源失败逐级降级 |
+| REFLECT | 反思纠错 | 检查子问题覆盖率（有要点数/总数）；缺失项换更宽泛关键词重试（受预算与轮次上限约束，保证终止）；LLM JSON 解析失败自动重试 |
+| FINISH | 判断何时结束 | 完成判定 = 覆盖率达标 或 预算/轮次耗尽；部分结果也明确输出；报告路径写入记忆供后续指代 |
 
 ### 对话主流程
 
@@ -65,19 +98,18 @@ python -m hotnews monthly    # 快捷：本月 OpenAI 动态
 ```mermaid
 flowchart TD
     A[用户输入] --> B{是退出词?}
-    B -- 是 --> Z[结束程序]
+    B -- 是 --> Z[结束程序 输出成本统计]
     B -- 否 --> C{猜谜进行中?}
     C -- 是且非新命令 --> C1[当猜测处理: 对→恭喜 / 错→提示 / 放弃→揭晓]
     C -- 否 --> D{趣味触发? 笑话/谜语}
     D -- 是 --> D1[讲笑话 / 出谜题进入猜谜状态]
-    D -- 否 --> E{日常查询规则命中?<br/>天气/周几/日期/倒计时}
-    E -- 是 --> E1[代码计算或抓天气, 秒回]
-    E -- 否 --> F[LLM 意图解析: research / hotlist / chat]
-    F -- chat --> F1[LLM 闲聊回复 + 颜文字]
-    F -- hotlist --> G{时间窗口是今天?}
-    G -- 否 --> G1[热榜无历史 → 自动转为资讯调研]
-    G -- 是 --> G2[直抓热榜数据生成 TOP 报告]
-    F -- research --> H[调研引擎: 拆解→并行Worker→汇总]
+    D -- 否 --> E[agent_core 五阶段循环<br/>规则优先→意图→计划→执行→反思→完成]
+    E --> F{意图类型}
+    F -- daily --> F1[代码计算/抓取 秒回]
+    F -- hotlist --> F2{时间窗口是今天?}
+    F2 -- 否 --> F3[热榜无历史 → 自动转为资讯调研]
+    F2 -- 是 --> F4[直抓热榜生成 TOP 报告]
+    F -- research --> F5[调研引擎: 拆解→并行Worker→覆盖率检查→汇总]
 ```
 
 ### 意图解析（两层）
@@ -129,28 +161,35 @@ flowchart LR
 hotnews/
 ├── __init__.py       包说明与运行方式
 ├── __main__.py       python -m hotnews 入口
-├── main.py           对话主循环、猜谜状态机、快捷命令、历史榜单自动转调研
-├── config.py         全局配置：API Key、模型、城市表、退出词、开场白
-├── llm.py            DeepSeek 调用封装（OpenAI 兼容接口，容错 JSON 解析）
-├── intent.py         意图解析：日常查询规则层 + LLM 三类意图层
+├── main.py           对话主循环（退出/猜谜/趣味状态机）、会话记录、结束语与自动关终端
+├── agent_core.py     Agent 核心循环：UNDERSTAND→PLAN→EXECUTE→REFLECT→FINISH
+├── session_log.py    会话记录：markdown 存档，文件夹按「开始~结束时间」命名
+├── config.py         全局配置：API Key、模型、城市表、预算上限、重试、退出词、会话记录
+├── budget.py         成本预算：LLM 调用计数 + 会话/任务两级上限 + 估算统计
+├── memory.py         会话记忆：对话历史 + 事实记忆 + 指代解析（"第二条"/"那个报告"）
+├── trace.py          执行轨迹：每步动作/工具/结果的结构化记录与摘要
+├── tools.py          工具注册表：统一元数据（说明/来源/成本级别）与调用入口
+├── llm.py            DeepSeek 封装：预算记账、网络/JSON 重试、注入防护、无 Key 报错
+├── intent.py         意图解析：规则层 + LLM 层 + 澄清出口（信息不足时追问）
 ├── time_utils.py     时间窗口 → 日期范围 / 文件 slug / 搜索词清洗
 ├── search.py         多源搜索：Bing 通用、少数派 RSS、HN 热帖/关键词
-├── research.py       调研引擎：拆解 → 并行 Worker → 汇总 → 写报告
+├── research.py       调研引擎：拆解 → 并行 Worker → 覆盖率 → 汇总 → 反思重试
 ├── hotlists.py       热榜抓取：百度 / B站三类，数量上限与降级说明
 ├── weather.py        天气查询：中国天气网 7 天预报解析
 ├── facts.py          日常事实：周几/日期/节日倒计时/城市识别
-└── fun.py            趣味功能：笑话库、谜语库、GBK 安全颜文字
+├── fun.py            趣味功能：笑话库、谜语库、GBK 安全颜文字、结束语模板
+└── (tests/smoke_agent.py  本地回归冒烟测试：mock LLM/搜索，验证五阶段与预算/反思路径，不入库)
 ```
 
 依赖关系（无循环）：
 
 ```
-config ← llm ← intent ─┐
-        ← search ← research ─┼→ main
-        ← hotlists ──────────┘
-        ← facts ← intent
-        ← weather
-        ← fun
+config ← budget ← llm ← intent ─┐
+      ← trace ← tools ──────────┤
+      ← memory ← agent_core ────┼→ main
+      ← session_log ────────────┘
+      ← search ← research
+      ← hotlists / weather / facts / fun
 ```
 
 ### 关键技术点
@@ -158,7 +197,10 @@ config ← llm ← intent ─┐
 - **LLM 温度分层**：意图解析 0.2 / 拆解 0.3 / 汇总 0.5 / 闲聊 0.7——任务越结构化越低随机性
 - **能代码绝不 LLM**：天气/日期/榜单等确定性任务用代码完成，省成本且稳定
 - **规则优先于 LLM**：日常查询先走规则（零成本秒回），只有规则覆盖不到才调 LLM
+- **预算防失控**：每次 LLM 调用经 budget 记账；会话 40 次 / 任务 14 次上限，超限自动收敛并输出部分结果（config 可调）
+- **反思有界**：覆盖率不足时最多重试 1 轮（MAX_REFLECT_ROUNDS），换更宽泛关键词；保证终止
 - **多源容错**：每个数据源独立 try/except，失败逐级降级，绝不因单一源故障中断整个流程
+- **注入防护**：所有接收外部抓取内容的 LLM 调用带 guard 声明（外部文本只当数据、不当指令）
 - **诚实原则**：做不到 = 说原因 + 给替代方案 + 报告内注明，不编造
 
 ---
@@ -185,12 +227,26 @@ config ← llm ← intent ─┐
 
 | 配置 | 默认值 | 说明 |
 | --- | --- | --- |
-| `API_KEY` | 环境变量 `LLM_API_KEY` 优先，内置测试默认值 | DeepSeek Key |
+| `API_KEY` | 环境变量 `LLM_API_KEY`（不内置默认值） | DeepSeek Key |
 | `MODEL` | `deepseek-chat` | 可换 `deepseek-reasoner` |
 | `SEARCH_LIMIT` | 5 | 每 Worker 搜索结果条数 |
 | `MAX_WORKERS` | 3 | 并行 Worker 数 |
+| `MAX_LLM_CALLS_PER_SESSION` | 40 | 单次会话 LLM 调用总上限（防失控） |
+| `MAX_LLM_CALLS_PER_TASK` | 14 | 单个任务 LLM 调用上限 |
+| `MAX_REFLECT_ROUNDS` | 1 | 反思纠错最大轮数（保证终止） |
+| `MAX_JSON_RETRIES` / `MAX_NETWORK_RETRIES` | 1 / 1 | LLM JSON/网络失败重试次数 |
+| `TRACE_SHOWN` | True | 是否展示执行轨迹摘要 |
+| `CONVERSATION_DIR` | `conversations` | 会话记录根目录 |
+| `AUTO_CLOSE_TERMINAL` | True | 结束对话后延时自动关闭终端（`HOTNEWS_NO_AUTOCLOSE=1` 可临时禁用） |
+| `CLOSE_DELAY_SECONDS` | 10 | 结束语后等待秒数再关闭终端 |
 | `DEFAULT_CITY` | 西安 | 未提城市时的天气兜底 |
 | `CITY_CODES` | 70+ 城市 | 中国天气网城市代码表 |
+
+## 🧪 回归测试
+
+```bash
+python tests/smoke_agent.py   # mock LLM 与搜索，验证五阶段循环/澄清/指代/反思重试/预算限额
+```
 
 ---
 

@@ -3,13 +3,17 @@
 流程：build_scenario 组装场景 → decompose 拆子问题 → ThreadPoolExecutor
 并行跑 research_worker（每 Worker 三层搜索 + LLM 提炼）→ synthesize 汇总。
 run_research 返回速递+完整报告文本（不写文件），save_report 负责落盘。
+
+反思纠错支持：run_research 返回 worker 明细（_workers）供上层做覆盖率检查；
+retry_missing 对缺失子问题用更宽泛关键词重搜重提炼（受预算约束）。
 """
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import digest
+from .budget import BudgetExceeded
 from .config import MAX_WORKERS, SEARCH_LIMIT
-from .llm import call_llm, parse_json_llm
+from .llm import call_llm, call_llm_json, parse_json_llm
 from .search import fetch_hackernews, fetch_hackernews_query, fetch_sspai, search
 from .time_utils import clean_time_words, date_range_of, normalize_window, time_expr
 
@@ -57,8 +61,9 @@ def decompose(scenario: dict) -> list[tuple[str, str]]:
         "输出 JSON 数组，每项：{\"subtopic\": \"子问题中文描述\", \"keywords\": \"搜索关键词（3~6个具体名词，空格分隔，不要句子；如：大模型 发布 新品 / AI alignment safety）\"}\n"
         "keywords 必须具体、可搜索，不要用完整句子。只输出 JSON，不要任何解释。"
     )
-    raw = call_llm(sys_p, scenario["topic"], temperature=0.3)
-    subs = parse_json_llm(raw, fallback=scenario["default_subtopics"])
+    # JSON 解析失败会自愈重试（call_llm_json），失败耗尽才回退默认拆分
+    subs = call_llm_json(sys_p, scenario["topic"], temperature=0.3,
+                         fallback=scenario["default_subtopics"])
     # 防御：兼容 [{subtopic, keywords}] 与纯字符串数组两种格式
     result = []
     if isinstance(subs, list):
@@ -120,7 +125,8 @@ def research_worker(item, scenario: dict) -> dict:
             "只有完全无关时才输出空数组。注意：平台登录页/功能页/客服页/无关产品页等与主题无关的内容，必须视为无关并输出空数组，"
             "不得硬凑要点。"
         )
-        raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}")
+        # guard=True：搜索结果来自外部网页，必须带注入防护声明
+        raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}", guard=True)
         data = parse_json_llm(raw, fallback={"key_points": [], "sources": []})
         return {
             "subtopic": subtopic,
@@ -148,35 +154,79 @@ def synthesize(results: list[dict], scenario: dict) -> str:
 
 
 def run_research(scenario: dict) -> dict:
-    """执行一次完整调研：拆解 → 并行 Worker → 汇总。
+    """执行一次完整调研：拆解（或复用已拆解子问题）→ 并行 Worker → 汇总。
 
-    返回 {"digest", "report", "file_name"}（不写文件），由调用方决定是否落盘。
+    返回 {"digest", "report", "file_name", "_workers"}（不写文件）。
+    _workers 为各子问题明细，供上层反思纠错（覆盖率检查）。
+    预算超限（BudgetExceeded）时按已完成的 worker 部分收敛，不中断进程。
     """
     print(f"[任务] {scenario['title']}（时间范围：{time_expr(scenario['date_range'])}）")
     print("[主Agent] 拆解任务...")
-    subtopics = decompose(scenario)
+    if scenario.get("_subtopics"):
+        subtopics = scenario["_subtopics"]
+        print("[主Agent] 复用已拆解的子问题（不重复调用 LLM）")
+    else:
+        subtopics = decompose(scenario)
     if not subtopics:  # 双保险：decompose 兜底失败时直接用默认拆分
         subtopics = [(s, "") for s in scenario["default_subtopics"][:5]]
     print(f"[主Agent] 子问题：{[s for s, _ in subtopics]}")
 
     print(f"[调度] 并行启动 {min(MAX_WORKERS, len(subtopics))} 个调研 Worker...")
     results = []
+    partial = False
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         futures = {pool.submit(research_worker, item, scenario): item for item in subtopics}
         for fut in as_completed(futures):
-            r = fut.result()
+            try:
+                r = fut.result()
+            except BudgetExceeded:
+                print("[调度] LLM 预算超限，按已完成的 Worker 部分收敛（不中断）")
+                partial = True
+                break
             results.append(r)
             status = f"{len(r['key_points'])} 条要点" if r["key_points"] else f"无可用信息({r.get('error', '搜索结果不相关')})"
             print(f"[Worker] 完成：{r['subtopic']} → {status}")
 
     print("[汇总Agent] 生成报告...")
-    report = synthesize(results, scenario)
+    try:
+        report = synthesize(results, scenario)
+    except BudgetExceeded:
+        print("[汇总Agent] 预算超限，跳过 LLM 汇总，输出速递兜底")
+        report = ""
+        partial = True
 
     return {
         "digest": digest.make_research_digest(results, scenario),
         "report": report,
         "file_name": scenario["file_name"],
+        "_workers": results,
+        "partial": partial,
     }
+
+
+def retry_missing(scenario: dict, items: list[tuple[str, str]]) -> list[dict]:
+    """反思纠错：对缺失子问题用更宽泛的关键词重搜、重提炼。
+
+    items 为 [(subtopic, keywords)]，keywords 为空时用更宽泛策略：
+    - 去掉子问题里的修饰词，取核心名词；
+    - 加时间窗口词（如"2026年10月"）帮助搜索引擎定位。
+    返回与 research_worker 同结构的列表。受预算约束（LLM 提炼调用照常记账）。
+    """
+    broadened = []
+    for subtopic, _k in items:
+        core = clean_time_words(subtopic)
+        # 更宽泛：去掉"最新/热点/关注/进展"等限定词，保留实体词
+        for w in ("最新", "热点", "资讯", "新闻", "关注", "进展", "动态", "情况", "现状", "影响", "趋势"):
+            core = core.replace(w, "")
+        core = core.strip() or subtopic
+        broadened.append((subtopic, core))
+    results = []
+    for item in broadened:
+        r = research_worker(item, scenario)
+        results.append(r)
+        status = f"{len(r['key_points'])} 条要点" if r["key_points"] else "仍无可用信息"
+        print(f"[Worker-重试] {r['subtopic']} → {status}")
+    return results
 
 
 def save_report(scenario: dict, report: str) -> str:

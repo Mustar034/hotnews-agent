@@ -1,12 +1,57 @@
-"""趣味功能：笑话 / 谜语 / 颜文字。
+"""趣味功能：笑话 / 谜语 / 颜文字 / 结束语。
 
-颜文字只使用 GBK 可编码字符（ASCII + ∩ 等中文符号），
-避免在传统 Windows 终端（cp936）下输出 emoji 导致乱码或 UnicodeEncodeError。
+颜文字只使用 GBK 可编码字符（避免在传统 Windows 终端 cp936 下输出
+emoji 导致乱码或 UnicodeEncodeError）；扩展库中的候选在运行时经
+gbk_safe 过滤，坏的符号自动剔除，保证安全。
 """
 import random
 
-# GBK 安全的颜文字（emoji 在传统控制台会乱码，改用颜文字）
-FACES = ["^_^", "(^_^)", "O(∩_∩)O", "T_T", ">_<", ":-)", ";-)", "XD", "(=_=)"]
+
+def gbk_safe(text: str) -> str:
+    """过滤掉无法用 GBK 编码的字符（防止传统 Windows 终端乱码/报错）。"""
+    if not text:
+        return ""
+    out = []
+    for ch in text:
+        try:
+            ch.encode("gbk")
+            out.append(ch)
+        except UnicodeEncodeError:
+            pass  # 剔除不可编码字符（emoji 等）
+    return "".join(out).strip()
+
+
+# GBK 安全的颜文字候选库（运行时经 gbk_safe 过滤，无法编码的自动剔除）
+FACES = [
+    "^_^", "(^_^)", "O(∩_∩)O", "T_T", ">_<", ":-)", ";-)", "XD", "(=_=)",
+    "(^▽^)", "(*^▽^*)", "(*¯︶¯*)", "(☆ω☆)", "(≧▽≦)", "(￣▽￣)",
+    "^o^", "^-^", "T^T", "ToT", "QAQ", "OvO", "OwO", "0_0", "O_o", "o_O",
+    "-_-|||", "←_←", "→_→", "↑_↑", "↓_↓", "↖(^ω^)↗", "(・∀・)",
+    "(ノωヽ)", "Orz", "(=￣ω￣=)", "(｡･ω･｡)", "(。・ω・。)", "ヽ(✿ﾟ▽ﾟ)ノ",
+]
+FACES = [f for f in FACES if f == gbk_safe(f)]  # 启动时剔除 GBK 不可编码项
+
+
+# 结束语模板库（LLM 不可用时的降级方案，随机选取 + 随机颜文字）
+FAREWELLS = [
+    "本次对话已结束，再见！",
+    "聊得很开心，下次再见！",
+    "今天的对话就到这里，随时欢迎再来！",
+    "再见啦，期待下次见面！",
+    "本次对话结束，祝你一切顺利！",
+    "就先聊到这里，后会有期！",
+    "希望刚才的回答帮到了你，再见！",
+    "本次对话结束，保持好心情！",
+]
+
+
+def random_face() -> str:
+    return random.choice(FACES)
+
+
+def random_farewell() -> str:
+    """降级结束语：随机模板 + 随机颜文字。"""
+    return random.choice(FAREWELLS) + " " + random_face()
 
 JOKES = [
     "为什么 C++ 比 C 更受欢迎？因为它有更多的『对象』(object)！",

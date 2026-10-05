@@ -14,6 +14,12 @@ dist/
 !README.md
 !hotnews/README.md
 
+# 会话记录（每次对话的 markdown 存档）
+conversations/
+
+# 测试文件（不入库）
+tests/
+
 # 临时文件
 *.log
 tmp/

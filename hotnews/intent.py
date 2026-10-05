@@ -5,8 +5,9 @@
 """
 import re
 
-from .facts import extract_city
-from .llm import call_llm, parse_json_llm
+from .config import CITY_CODES
+from .facts import KNOWN_FOREIGN, extract_city
+from .llm import call_llm_json
 
 # ---- 规则层：日常查询 ----
 
@@ -158,10 +159,123 @@ def _redirect_platform_to_hotlist(topic: str, source: str, time_window: str) -> 
     return None
 
 
-def parse_intent(user_input: str) -> dict:
-    """LLM 把用户一句话解析为结构化任务；解析失败回退为通用调研。"""
-    raw = call_llm(INTENT_SYSTEM, user_input, temperature=0.2)
-    data = parse_json_llm(raw, fallback={})
+# 纯虚词表：去掉后若输入为空，说明用户没给出任何实质主题（需要澄清）
+_VOID_WORDS = re.compile(
+    r"帮我|给我|帮我查|帮我找|查一下|查查|查|看看|问一下|一下|请问|我想|我要|想要|"
+    r"了解|知道|说说|讲讲|介绍|来|那个|这个|的|了|呢|啊|吧|呀|吗"
+)
+
+# 省略句模式："西安呢？" / "西安怎么样" / "后天呢" —— subject + 语气词/询问词结尾
+_ELLIPSIS_PAT = re.compile(r"^(.{1,6}?)\s*(?:呢|怎么样|如何|咋样|什么情况|啥情况)\s*[？?]?$")
+_ELLIPSIS_TIME = ("今天", "明天", "后天", "昨天", "前天")
+
+
+def resolve_ellipsis(text: str, memory=None) -> tuple[str | None, dict | None]:
+    """解析承前省略句（规则层，零 LLM 成本）。
+
+    例：上一轮「哈尔滨明天什么天气」，本轮「西安呢？」→ 应理解为「西安明天什么天气」。
+
+    返回 (补全后的句子, 可直接执行的结构化意图)；两者均为 None 表示不是省略句。
+    - subject 是城市且上轮是天气查询 → 直接构造天气意图（复用上轮日期/雨雪参数）
+    - subject 是时间词且上轮是周几/日期查询 → 直接构造 weekday 意图
+    - 有其他上轮查询 → 补全句子交给 LLM 解析（更稳）
+    """
+    t = (text or "").strip().strip("？?。！!，, ")
+    m = _ELLIPSIS_PAT.match(t)
+    if not m:
+        return None, None
+    subject = m.group(1).strip()
+    if not subject:
+        return None, None
+    if memory is None:
+        return None, None
+    last = memory.get_fact("last_query_intent")
+    if not last:
+        return None, None
+
+    # 1) 承前天气：主语是城市 → 复用上轮的日期与雨雪参数
+    if last.get("intent") == "weather":
+        if subject in CITY_CODES:
+            return f"{subject}{last.get('day', '今天')}天气怎么样", {
+                "intent": "weather",
+                "day": last.get("day", "今天"),
+                "city": subject,
+                "city_kind": "known",
+                "ask_rain": last.get("ask_rain", False),
+            }
+        if subject in KNOWN_FOREIGN:
+            return f"{subject}{last.get('day', '今天')}天气怎么样", {
+                "intent": "weather",
+                "day": last.get("day", "今天"),
+                "city": "未知城市",
+                "city_kind": "unknown",
+                "ask_rain": last.get("ask_rain", False),
+            }
+        return None, None  # 不是城市，不硬猜天气
+
+    # 2) 承前周几：主语是时间词 → 复用查询类型
+    if last.get("intent") == "weekday" and subject in _ELLIPSIS_TIME:
+        return f"{subject}是周几", {"intent": "weekday", "day": subject}
+
+    # 3) 承前其他查询（research/hotlist 等）：补全句子，交给 LLM 解析
+    if subject:
+        return f"继续上次的{last.get('intent', '')}请求，主题：{subject}", None
+
+    return None, None
+
+
+def _needs_clarify(user_input: str, data: dict) -> bool:
+    """判断是否需要澄清：LLM 没解析出可执行信息，且输入本身信息量不足。
+
+    保守策略：只有"明显缺主题"才追问（避免打扰）；
+    有默认值可执行的情况（如 hotlist 无平台 → 综合榜）不追问。
+    """
+    if not data:
+        return True
+    intent = data.get("intent")
+    if intent in ("chat", "hotlist"):
+        return False  # 闲聊无需主题；榜单可走综合源
+    if intent == "research":
+        # 用户输入去掉虚词后没有实质内容 → 必须澄清（无论 LLM 给了什么主题）
+        cleaned = _VOID_WORDS.sub("", user_input).strip()
+        if len(cleaned) < 2:
+            return True
+        topic = (data.get("topic") or "").strip()
+        if topic and topic != "全网热点":
+            return False
+        # 主题为空/默认值：看输入是否含实质名词（"热点/新闻"等泛词也算可执行）
+        cleaned2 = _TOPIC_GENERIC.sub("", user_input).strip()
+        if len(cleaned2) >= 2:
+            return False
+        return True
+    return False
+
+
+def parse_intent(user_input: str, memory=None) -> dict:
+    """LLM 把用户一句话解析为结构化任务。
+
+    - memory 可选：注入最近对话历史帮助理解指代（如"再讲讲第二条"）
+    - 解析失败或信息不足：返回 {"intent": "clarify", "question": ...}，
+      由 Agent 核心循环追问，而非静默回退为通用调研（读懂目标的落点）
+    """
+    user_msg = user_input
+    if memory is not None:
+        ctx = memory.context_blurb(n=4)
+        if ctx:
+            user_msg = f"对话历史（仅供理解指代，勿据此编造新事实）：\n{ctx}\n\n当前请求：{user_input}"
+
+    data = call_llm_json(INTENT_SYSTEM, user_msg, temperature=0.2, fallback={})
+
+    if _needs_clarify(user_input, data):
+        return {
+            "intent": "clarify",
+            "question": (
+                "我理解您想让我做资讯调研，但还需要明确一点：您想调研什么主题？\n"
+                "  例：AI 热点 / 生物科研 / OpenAI 动态 / 全网热点\n"
+                "（直接回复主题即可；回「全网热点」我会按综合热点调研）"
+            ),
+        }
+
     intent = data.get("intent", "research")
 
     if intent == "chat":
