@@ -51,12 +51,15 @@ def make_research_digest(results: list[dict], scenario: dict) -> str:
 
     results 为 research_worker 的结构化输出；scenario 提供主题名。
     速递条目：一句话要点 + 一句点评 +（来源域名，日期）；最后一句为编辑总结。
+    兜底：LLM 标了「（背景，非本期）」的要点一律不上速递。
     """
     topic = scenario.get("topic", "热点")
     blocks = []
     for r in results:
         domains = ", ".join(_domain(u) for u in r.get("sources", [])[:2])
         for kp in r.get("key_points", [])[:3]:
+            if "背景，非本期" in kp or "非本期" in kp:
+                continue  # 背景条目不上速递
             blocks.append(f"- {kp}（来源：{domains or '见报告'}）")
     if not blocks:
         return f"{_header(topic)}\n本次调研未获取到可展示的速递条目。\n"
@@ -65,7 +68,8 @@ def make_research_digest(results: list[dict], scenario: dict) -> str:
         "你是资深科技媒体编辑，把下面的调研要点整理成『速递』风格。要求：\n"
         "1. 逐条编号输出（4~8条），每条格式：\n"
         "   序号 一句话要点（≤60字）。一句点评（≤25字，用『值得看：』『信号：』『注意：』『背景：』等开头）。来源域名，日期\n"
-        "2. 每条只使用我提供的要点，不得编造；日期从要点中提取（没有明确日期写『日期不详』）\n"
+        "2. 每条只使用我提供的要点，不得编造；日期从要点中提取（没有明确日期写『日期不详』）；"
+        "若某条要点的日期不属于本期时间范围，不要输出该条\n"
         "3. 来源必须使用括号里提供的真实域名\n"
         "4. 最后单独一行输出总结句：用『这N条其实在同一条线上：』或类似句式点出共同主线，"
         "这是编辑的观察性评论，不编造事实，不超过60字\n"

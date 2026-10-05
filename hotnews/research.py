@@ -6,10 +6,17 @@ run_research 返回速递+完整报告文本（不写文件），save_report 负
 
 反思纠错支持：run_research 返回 worker 明细（_workers）供上层做覆盖率检查；
 retry_missing 对缺失子问题用更宽泛关键词重搜重提炼（受预算约束）。
+
+时间窗口纪律（重要）：
+- 单日窗口（今天/昨天/前天）：提炼规则强制只留"当天"要点，另有确定性日期过滤
+  _filter_single_day 做兜底——不依赖 LLM 自觉，避免把前几天旧闻混进"今天"速递；
+- 多日窗口：保留"超过范围开始3天标背景"的宽松规则。
 """
 import contextvars
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
 from . import digest
 from .budget import BudgetExceeded
@@ -18,6 +25,50 @@ from .events import say
 from .llm import call_llm, call_llm_json, parse_json_llm
 from .search import fetch_hackernews, fetch_hackernews_query, fetch_sspai, search
 from .time_utils import clean_time_words, date_range_of, normalize_window, time_expr
+
+# 单日窗口：key_points 里出现这些字样直接剔除（LLM 标记的背景条目）
+_BACKGROUND_MARKERS = ("背景，非本期", "背景,非本期", "非本期", "背景条目")
+
+
+def _point_date(kp: str) -> str | None:
+    """从要点文本提取日期，返回 'YYYY-MM-DD'；提取不到返回 None。
+
+    支持：2026年10月5日 / 10月5日 / 10-05 / 10/5（月日默认当年）。
+    """
+    m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日", kp)
+    if m:
+        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    m = re.search(r"(?<!\d)(\d{1,2})月(\d{1,2})日(?!\d)", kp)
+    if m:
+        y = datetime.now().year
+        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    m = re.search(r"(?<!\d)(\d{1,2})[-/](\d{1,2})(?!\d)", kp)
+    if m and int(m.group(1)) <= 12:  # 形如 10-05 的日期，避免误伤
+        y = datetime.now().year
+        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    return None
+
+
+def _filter_single_day(results: list[dict], window_date: datetime) -> list[dict]:
+    """确定性兜底：单日窗口只保留『当天』要点，剔除旧日期与背景标注。
+
+    不依赖 LLM 自觉（LLM 提炼规则可能被绕过）：凡要点中解析出日期且不是
+    window_date，或含背景标记，一律从 key_points 剔除；没有明确日期的要点
+    也剔除（单日窗口无法证明它是当天的，宁缺毋滥）。
+    """
+    want = f"{window_date:%Y-%m-%d}"
+    kept = []
+    for r in results:
+        kps = []
+        for kp in r.get("key_points", []):
+            if any(mark in kp for mark in _BACKGROUND_MARKERS):
+                continue
+            d = _point_date(kp)
+            if d is None or d != want:  # 无日期或非当天 → 单日窗口一律不要
+                continue
+            kps.append(kp)
+        kept.append({**r, "key_points": kps[:5]})
+    return kept
 
 
 def build_scenario(intent: dict) -> dict:
@@ -114,13 +165,27 @@ def research_worker(item, scenario: dict) -> dict:
             f"[{i}] {r['title']}\nURL: {r['url']}\n{r.get('snippet', '')}"
             for i, r in enumerate(results, 1)
         )
+        # 单日过滤只认语义窗口（今天/昨天/前天）；"本周"即使恰好只有一天
+        # （如周一时本周==今天）也按多日宽松规则，避免把本周热点全部误杀
+        is_single_day = scenario["time_window"] in ("今天", "昨天", "前天")
+        if is_single_day:
+            time_rule = (
+                f"4. 调研时间范围是：{time_expr(scenario['date_range'])}（单日）。"
+                "只提炼『该日当天』发布的要点，每条要点必须带有该日日期（如『10月5日』）；"
+                "日期不是当天的条目（哪怕是前一天）一律不得写入 key_points，"
+                "也不得作为本期热点；来源可保留在 sources 供完整报告引用；\n"
+            )
+        else:
+            time_rule = (
+                f"4. 调研时间范围是：{time_expr(scenario['date_range'])}。优先提炼该范围内的信息；"
+                "日期明显早于范围开始（超过3天）的要点，结尾必须标注『（背景，非本期）』，不能作为本期热点核心；\n"
+            )
         sys_p = (
             "你是调研员。基于给定的搜索结果，提炼该子问题在指定时间范围内的关键发现。要求：\n"
             "1. 只写搜索结果里出现的事实，不编造、不推测；\n"
             "2. 明确区分『已确认事实』和『传闻/未经证实』；\n"
             "3. 每条要点一句话，最多 5 条，注明日期（如『9月24日』）；没有明确日期的标注『日期不详』；\n"
-            f"4. 调研时间范围是：{time_expr(scenario['date_range'])}。优先提炼该范围内的信息；"
-            "日期明显早于范围开始（超过3天）的要点，结尾必须标注『（背景，非本期）』，不能作为本期热点核心；\n"
+            + time_rule +
             "5. 只输出 JSON：{\"subtopic\": \"...\", \"key_points\": [\"...\"], \"sources\": [\"url\"]}；\n"
             "6. sources 必须来自上面真实出现的 URL；\n"
             "7. 若搜索结果与子问题相关，即使没有近期新闻，也应提炼出与该主题相关的背景要点并注明日期；"
@@ -130,11 +195,15 @@ def research_worker(item, scenario: dict) -> dict:
         # guard=True：搜索结果来自外部网页，必须带注入防护声明
         raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}", guard=True)
         data = parse_json_llm(raw, fallback={"key_points": [], "sources": []})
-        return {
+        result = {
             "subtopic": subtopic,
             "key_points": data.get("key_points", [])[:5],
             "sources": [u for u in data.get("sources", [])[:5] if u.startswith("http")],
         }
+        # 单日窗口确定性兜底：只留当天要点（不依赖 LLM 自觉）
+        if scenario["time_window"] in ("今天", "昨天", "前天"):
+            result = _filter_single_day([result], scenario["date_range"][0])[0]
+        return result
     except Exception as e:
         return {"subtopic": subtopic, "key_points": [], "sources": [], "error": str(e)}
 
