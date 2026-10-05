@@ -126,16 +126,19 @@ class QQClient:
 
         - scope="c2c"   → /v2/users/{target}/messages（单聊）
         - scope="group" → /v2/groups/{target}/messages（群聊）
-        - msg_id 非空 = 被动回复（须携带用户消息 id）；为空 = 主动消息（须带 msg_seq）
+        - msg_id 非空 = 被动回复（须携带用户消息 id 与递增 msg_seq）；
+          msg_id 为空 = 主动消息（带 msg_seq）
+        - 重要：QQ 以「msg_id + msg_seq」联合去重（官方默认 msg_seq=1，
+          同一 msg_id 重复发默认序号会报 40054005 消息被去重）。
+          故被动回复也必须每次递增 msg_seq（秒回与正式回复才能都送达）。
+        - 被动回复有效期 5 分钟（Agent 调研 1-3 分钟在有效期内）。
         """
         if not target:
             raise RuntimeError("缺少消息接收方（openid/group_openid）")
         path = f"{'users' if scope == 'c2c' else 'groups'}/{target}/messages"
-        body = {"content": content, "msg_type": 0}
+        body = {"content": content, "msg_type": 0, "msg_seq": self._next_seq()}
         if msg_id:
             body["msg_id"] = msg_id
-        else:
-            body["msg_seq"] = self._next_seq()
         resp = requests.post(
             f"{_API_BASE}/v2/{path}",
             headers={"Authorization": f"QQBot {self.get_access_token()}"},  # 官方 v2 API 前缀是 QQBot
@@ -188,6 +191,35 @@ def _strip_at_prefix(content: str, bot_name: str = "") -> str:
     return text.strip()
 
 
+def _collect_events(qsink, thread, max_wait: Optional[float] = None) -> tuple[list[str], bool]:
+    """从事件队列收集 agent/digest 文本；返回 (parts, timed_out)。
+
+    - max_wait=None：一直等到线程结束（慢任务等完整结果）
+    - max_wait=秒：窗口内没出完整结果即超时返回（判定为慢任务，调用方先回"请稍候"）
+    progress/plan 等过程事件不入 parts，只有最终 agent/digest 文本。
+    """
+    parts: list[str] = []
+    deadline = time.time() + max_wait if max_wait else None
+    while True:
+        if deadline is not None:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                return parts, True
+            wait = min(0.3, max(0.05, remaining))
+        else:
+            wait = 0.3
+        try:
+            ev = qsink.q.get(True, wait)
+        except Exception:
+            if not thread.is_alive() and qsink.q.empty():
+                return parts, False
+            continue
+        if ev is None:
+            return parts, False
+        if ev.type in ("agent", "digest") and ev.text:
+            parts.append(ev.text)
+
+
 class QQListener:
     """基于官方 SDK（qq-botpy）的 WebSocket 长连接监听。
 
@@ -226,27 +258,25 @@ class QQListener:
             try:
                 engine = get_engine()
                 sid = engine.create_session()
-                # 秒回：先发"收到，正在处理"，避免用户干等/误以为没反应
-                # （QQ 被动回复同一条消息 60 分钟内可回 4 次，这里用 2 次：确认 + 结果）
+                qsink, thread = engine.start_ask(sid, content, interactive=False)
+
+                # 快任务窗口（20 秒）：chat/天气/日期等几秒就出结果，
+                # 直接回答案，不加"请稍候"；超过 20 秒才判定为慢任务（调研）。
+                parts, timed_out = _collect_events(qsink, thread, max_wait=20.0)
+                if not timed_out:
+                    reply = "\n".join(parts) or "处理完成，但没有生成可回复的内容。"
+                    client.send_message(target, reply, msg_id=msg_id, scope=scope)
+                    print(f"[qqbot] 已回发: {'group' if scope=='group' else 'c2c'} ...{target[-6:]} len={len(reply)}", flush=True)
+                    return
+
+                # 慢任务：先回"正在调研"，再等正式结果（被动回复 msg_seq 递增，不冲突）
                 try:
                     client.send_message(target, "收到！正在为你调研，请稍候（约 1-3 分钟）~",
                                         msg_id=msg_id, scope=scope)
                 except Exception as e:
                     print(f"[qqbot] 秒回失败: {e}", flush=True)
-                qsink, thread = engine.start_ask(sid, content, interactive=False)
-                reply_parts = []
-                while True:
-                    try:
-                        ev = qsink.q.get(True, 0.3)
-                    except Exception:
-                        if not thread.is_alive() and qsink.q.empty():
-                            break
-                        continue
-                    if ev is None:
-                        break
-                    if ev.type in ("agent", "digest") and ev.text:
-                        reply_parts.append(ev.text)
-                reply = "\n".join(reply_parts) or "处理完成，但没有生成可回复的内容。"
+                parts2, _ = _collect_events(qsink, thread)
+                reply = "\n".join(parts2) or "处理完成，但没有生成可回复的内容。"
                 client.send_message(target, reply, msg_id=msg_id, scope=scope)
                 print(f"[qqbot] 已回发: {'group' if scope=='group' else 'c2c'} ...{target[-6:]} len={len(reply)}", flush=True)
             except Exception as e:  # 兜底：错误也要回发，让用户知道
