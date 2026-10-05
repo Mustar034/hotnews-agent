@@ -86,12 +86,13 @@ CLOSE_DELAY_SECONDS = 10                  # 结束语后等待秒数再关闭终
 if os.environ.get("HOTNEWS_NO_AUTOCLOSE", "") in ("1", "true", "True"):
     AUTO_CLOSE_TERMINAL = False
 
-# ---- QQ 官方机器人（可选：单聊对话 + 每日速递推送）----
+# ---- QQ 官方机器人（可选：私聊/群@对话 + 每日速递推送）----
 # 安全：凭据一律放 .env（QQ_*），代码零内置；未配置时对应功能自动禁用。
 QQ_APP_ID = os.environ.get("QQ_APP_ID", "")            # QQ 开放平台机器人 AppID
 QQ_APP_SECRET = os.environ.get("QQ_APP_SECRET", "")    # QQ 开放平台机器人 Secret
-# 速递推送对象：显式指定单聊 openid；留空则用「用户在 QQ 里给机器人发过消息后自动绑定」的 openid
-QQ_TARGET_OPENID = os.environ.get("QQ_TARGET_OPENID", "")
+# 速递推送对象：逗号分隔多个 openid；留空则用「给机器人发过消息自动绑定」的全部用户
+QQ_TARGET_OPENIDS = os.environ.get("QQ_TARGET_OPENIDS", "")
+QQ_TARGET_OPENID = os.environ.get("QQ_TARGET_OPENID", "")  # 兼容单接收人写法
 
 # ---- 对话 ----
 EXIT_WORDS = (
