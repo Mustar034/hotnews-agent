@@ -12,6 +12,7 @@
     GET  /                               前端页面（web/dist，构建后）
 
 安全：API Key 只在后端环境变量/.env，前端零暴露；会话预算沿用 budget。
+      （QQ 机器人对话走独立进程 python -m hotnews.qqbot，不占用本服务）
 """
 import asyncio
 import json

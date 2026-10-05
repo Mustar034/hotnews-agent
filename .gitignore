@@ -5,9 +5,10 @@ __pycache__/
 build/
 dist/
 
-# 环境变量（可能包含 API Key）
+# 环境变量（可能包含 API Key）；.env.example 是模板，保留入库
 .env
 .env.*
+!.env.example
 
 # 运行时生成的调研报告（*.md 但保留 README）
 *.md
@@ -19,6 +20,9 @@ conversations/
 
 # 测试文件（不入库）
 tests/
+
+# 运行时数据（QQ openid 绑定等）
+data/
 
 # 前端依赖与构建产物
 web/node_modules/

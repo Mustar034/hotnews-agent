@@ -21,6 +21,8 @@
 | 💰 成本预算 | 会话/任务两级 LLM 调用上限，超限自动收敛并说明 | 退出时输出调用次数与估算费用 |
 | 💾 会话记录 | 每次对话自动存档为 markdown，文件夹按"开始~结束时间"命名 | 退出时提示保存路径；下次启动自动开启新一轮 |
 | 🌐 Web 版 | 浏览器交互式对话：SSE 流式展示计划/运行过程/速递，自动生成报告 | `npm run dev`（Vite）+ `python -m hotnews.web_api` |
+| 💬 QQ 机器人 | 官方开放平台：加机器人好友即可对话（WebSocket 免公网）；每日速递推送到私聊 | `python -m hotnews.qqbot` + `python -m hotnews.brief --push` |
+| ⏰ 定时速递 | GitHub Actions cron 每天 8:00（北京）自动生成并推送前一日 AI 科技速递 | `.github/workflows/daily_brief.yml` |
 | 🤝 诚实降级 | 做不到的事说明原因并给替代方案，绝不假装成功 | 热榜无历史数据 → 自动转资讯调研；未知城市 → 提示支持列表 |
 
 ---
@@ -77,6 +79,54 @@ cd web && npm run build              # 产物在 web/dist，后端自动托管
 ```
 
 接口：`POST /api/chat`（SSE 流式返回计划/进度/速递/摘要事件）、`GET /api/sessions`、`GET /api/sessions/{id}/messages`、`GET /api/reports`。Web 会话在内存中（进程重启即清空），每会话独立预算与记忆，互不干扰。
+
+### QQ 机器人：单聊对话 + 每日速递（官方开放平台）
+
+**为什么是 QQ 官方开放平台（q.qq.com）**：个人即可注册开发者（实名认证），2 分钟创建机器人拿 AppID/Secret，无需企业主体；收消息用 **WebSocket 长连接，免公网回调地址**。⚠️ 不要用个人号协议机器人（go-cqhttp / NapCat / Lagrange 等）——非官方、腾讯明令禁止、封号风险极高。
+
+**注册与配置（详细步骤）**：
+
+1. 打开 **QQ 开放平台**（`q.qq.com`）→ 用 QQ 账号登录 → 按引导注册**开发者**（个人主体，需实名认证，人脸/身份证验证）。
+2. 进入「应用管理」→「创建机器人」：填写机器人名称/头像/简介（如"HotNews 助手"），提交后等待审核通过（通常 1~2 个工作日；个人认证前机器人仅供管理员自己使用，正好满足"自己用"的场景）。
+3. 机器人创建成功后，进入「**开发设置**」页，复制 **AppID** 和 **AppSecret**，填入项目根目录 `.env`：
+
+```
+QQ_APP_ID=你的AppID
+QQ_APP_SECRET=你的AppSecret
+```
+
+4. **启动单聊对话**（终端保持运行）：
+
+```bash
+python -m hotnews.qqbot
+```
+
+看到"已连接 QQ 开放平台，等待私聊消息"后，用**最新版手机 QQ** 搜索你的机器人（AppID 对应号码）加为好友，发消息即可对话——复用同一套五阶段 Agent（拆解/调研/反思/速递），异步应答（处理完自动回发，不阻塞）。
+
+5. **绑定速递接收人（自动）**：给机器人发任意一条消息后，其 openid 会自动记录到 `data/qq_target_openid.json`，此后速递推送发到该私聊；也可以手动在 `.env` 里指定 `QQ_TARGET_OPENID`。
+
+**注意（重要限制）**：QQ 官方机器人**群聊主动消息每月仅 4 条**，所以每日速递走**单聊**（每个好友每天上限 1000 条，完全够用）；如果你把它拉进群，它只能被动回复 @ 消息，无法每天主动在群里推送。
+
+### 每日速递（手动测试）
+
+```bash
+python -m hotnews.brief --date yesterday --theme ai --push   # 推送昨天 AI 速递到 QQ 私聊
+python -m hotnews.brief --no-push                            # 只生成不推送（本地预览）
+python -m hotnews.brief --date 2026-10-04 --theme 生物        # 其他日期/主题
+```
+
+### 定时速递（GitHub Actions）
+
+每天 8:00（北京时间）自动生成前一日 AI 科技速递并推送到 QQ 私聊，电脑关机也能跑：
+
+1. 把项目推到 GitHub（`git remote add origin <仓库地址> && git push`）。
+2. 仓库 → Settings → Secrets and variables → Actions → 新增四个 Secret：
+   - `LLM_API_KEY`：你的 DeepSeek Key
+   - `QQ_APP_ID` / `QQ_APP_SECRET`：QQ 开放平台机器人凭据
+   - `QQ_TARGET_OPENID`：速递接收人的 openid（先从本地 `data/qq_target_openid.json` 查，或直接 `.env` 里配置）
+3. 推送后 `.github/workflows/daily_brief.yml` 会自动启用（`cron: "0 0 * * *"` 即 UTC 0:00 = 北京 8:00）。可在 Actions 页手动 `Run workflow` 先测一次。
+
+> 注意：GitHub Actions 免费额度每月 2000 分钟，每天一次任务耗约 1~3 分钟，完全在免费额度内。
 
 ### 会话记录与退出
 
@@ -186,6 +236,8 @@ hotnews/
 ├── context.py        会话上下文（contextvars：每会话独立 budget/trace/memory/sink）
 ├── session_log.py    会话记录：markdown 存档，文件夹按「开始~结束时间」命名
 ├── web_api.py        FastAPI 后端：SSE 流式对话、会话/报告接口、静态托管前端
+├── qqbot.py          QQ 官方机器人：OpenAPI 发送 + WebSocket 单聊监听（python -m hotnews.qqbot）
+├── brief.py          每日速递任务：生成指定日期主题简报并推送（python -m hotnews.brief）
 ├── config.py         全局配置：API Key、模型、城市表、预算上限、重试、退出词、会话记录
 ├── budget.py         成本预算：LLM 调用计数 + 会话/任务两级上限 + 估算统计
 ├── memory.py         会话记忆：对话历史 + 事实记忆 + 指代解析（"第二条"/"那个报告"）
@@ -200,7 +252,7 @@ hotnews/
 ├── weather.py        天气查询：中国天气网 7 天预报解析
 ├── facts.py          日常事实：周几/日期/节日倒计时/城市识别
 ├── fun.py            趣味功能：笑话库、谜语库、GBK 安全颜文字、结束语模板
-└── (tests/smoke_agent.py / smoke_engine.py  本地回归冒烟测试，不入库)
+└── (tests/smoke_agent.py / smoke_engine.py / smoke_qq.py  本地回归冒烟测试，不入库)
 
 web/                        Vue3 前端（Vite）
 ├── src/App.vue             对话界面：SSE 流式渲染（计划折叠/运行过程/速递/摘要）
@@ -257,12 +309,15 @@ web/                        Vue3 前端（Vite）
 | `CLOSE_DELAY_SECONDS` | 10 | 结束语后等待秒数再关闭终端 |
 | `DEFAULT_CITY` | 西安 | 未提城市时的天气兜底 |
 | `CITY_CODES` | 70+ 城市 | 中国天气网城市代码表 |
+| `QQ_APP_ID` / `QQ_APP_SECRET` | 空 | QQ 开放平台机器人凭据（单聊对话 + 速递推送） |
+| `QQ_TARGET_OPENID` | 空 | 速递接收人 openid（可选；给机器人发过消息会自动绑定） |
 
 ## 🧪 回归测试
 
 ```bash
 python tests/smoke_agent.py    # mock LLM/搜索：终端五阶段/澄清/指代/反思重试/预算/省略句
 python tests/smoke_engine.py   # 引擎层：事件流/会话隔离/流式队列/JSON 序列化
+python tests/smoke_qq.py       # QQ：access_token 缓存/主动+被动发送 payload/openid 绑定（mock 网络）
 ```
 
 ---
@@ -275,9 +330,10 @@ python tests/smoke_engine.py   # 引擎层：事件流/会话隔离/流式队列
 
 ## 🗺️ 后续规划（开放建议）
 
+- [x] Web 界面（对话 + 报告预览）
+- [x] 连接 QQ（官方开放平台：单聊对话 + 每日速递）
+- [x] 定时任务（GitHub Actions 每日早报推送）
 - [ ] 更多热榜源（微博/知乎，需登录态或第三方代理）
-- [ ] 连接微信
 - [ ] 更多城市天气 / 历史天气查询
 - [ ] 农历节日精确计算（引入农历库）
-- [ ] Web 界面（对话 + 报告预览）
-- [ ] 定时任务（每日早报推送）
+- [ ] Web 会话持久化（SQLite）与访问鉴权
