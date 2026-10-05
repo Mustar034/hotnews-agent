@@ -226,6 +226,13 @@ class QQListener:
             try:
                 engine = get_engine()
                 sid = engine.create_session()
+                # 秒回：先发"收到，正在处理"，避免用户干等/误以为没反应
+                # （QQ 被动回复同一条消息 60 分钟内可回 4 次，这里用 2 次：确认 + 结果）
+                try:
+                    client.send_message(target, "收到！正在为你调研，请稍候（约 1-3 分钟）~",
+                                        msg_id=msg_id, scope=scope)
+                except Exception as e:
+                    print(f"[qqbot] 秒回失败: {e}", flush=True)
                 qsink, thread = engine.start_ask(sid, content, interactive=False)
                 reply_parts = []
                 while True:
