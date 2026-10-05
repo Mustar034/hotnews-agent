@@ -1,0 +1,17 @@
+/* HotNews Web 全局样式：浅色、简洁、蓝绿主色（避免大面积高饱和色） */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #app {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: #f5f7fa;
+  color: #1f2937;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: background .15s;
+}

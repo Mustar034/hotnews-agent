@@ -20,6 +20,7 @@ import re
 from . import digest, intent, research
 from .budget import BudgetExceeded, get_budget
 from .config import MAX_REFLECT_ROUNDS
+from .events import say
 from .trace import get_trace
 from .tools import describe_tool
 
@@ -141,20 +142,20 @@ def _plan(parsed: dict, user_input: str, memory) -> list[dict]:
     return plan
 
 
-def _show_plan(plan: list[dict], parsed: dict) -> None:
+def _show_plan(plan: list[dict], parsed: dict, sink=None) -> None:
     """把计划展示给用户（可解释、可控）。"""
     if parsed["intent"] == "chat":
         return  # 聊天单步，不啰嗦
     lines = [f"[计划] 我将分 {len(plan)} 步完成："]
     for p in plan:
         lines.append(f"  {p['step']}. {p['desc']}")
-    print("\n".join(lines))
+    say(sink, "\n".join(lines), "plan", steps=plan)
 
 
 # ---------------------------------------------------------------------------
 # EXECUTE + REFLECT + FINISH
 # ---------------------------------------------------------------------------
-def _run_daily(daily: dict, memory) -> None:
+def _run_daily(daily: dict, memory, sink=None) -> None:
     """确定性任务（天气/周几/日期/倒计时）：单步执行，零 LLM。"""
     trace = get_trace()
     from .main import answer_daily  # 延迟导入避免循环依赖
@@ -163,10 +164,10 @@ def _run_daily(daily: dict, memory) -> None:
     trace.log("finish", "确定性任务完成（零 LLM 成本）")
     memory.remember_agent(ans)
     memory.remember_fact("last_query_intent", daily)  # 供下一轮省略句补全
-    print(f"[Agent] {ans}")
+    say(sink, f"[Agent] {ans}", "agent")
 
 
-def _run_chat(user_input: str, memory) -> None:
+def _run_chat(user_input: str, memory, sink=None) -> None:
     """chat 意图：一句话闲聊（受会话预算约束）。"""
     from .llm import call_llm
     try:
@@ -176,16 +177,16 @@ def _run_chat(user_input: str, memory) -> None:
             temperature=0.7,
         )
     except BudgetExceeded as e:
-        print(f"[Agent] {e}")
+        say(sink, f"[Agent] {e}", "error")
         return
     except Exception:
         reply = "好的，还有别的需要吗？"
     from .fun import random_face
     memory.remember_agent(reply)
-    print(f"[Agent] {reply} {random_face()}")
+    say(sink, f"[Agent] {reply} {random_face()}", "agent")
 
 
-def _run_hotlist(parsed: dict, memory) -> None:
+def _run_hotlist(parsed: dict, memory, sink=None, interactive: bool = True) -> None:
     """hotlist 任务：抓榜单 → 速递 → 询问完整报告。"""
     from . import hotlists
     trace = get_trace()
@@ -194,7 +195,7 @@ def _run_hotlist(parsed: dict, memory) -> None:
     if window not in ("今天",):
         # 热榜无历史 → 自动转为资讯调研（现有行为，显式记录原因）
         trace.log("reflect", f"榜单无历史数据（{window}），转为资讯调研", status="note")
-        print(f"[Agent] 您要的是「{window}」的榜单，但热榜是实时快照、没有历史数据。我改用资讯调研，为您整理{window}的热点新闻...")
+        say(sink, f"[Agent] 您要的是「{window}」的榜单，但热榜是实时快照、没有历史数据。我改用资讯调研，为您整理{window}的热点新闻...", "agent")
         research_intent = {
             "intent": "research",
             "topic": f"{window}热点新闻",
@@ -204,28 +205,27 @@ def _run_hotlist(parsed: dict, memory) -> None:
             "title": f"{window}热点新闻整理",
             "subtopics": ["国内热点事件", "国际热点事件", "科技动态", "财经动态"],
         }
-        _run_research(research_intent, memory)
+        _run_research(research_intent, memory, sink=sink, interactive=interactive)
         return
 
-    print("[Agent] 好的，正在为您抓取榜单，请稍候...")
+    say(sink, "[Agent] 好的，正在为您抓取榜单，请稍候...", "progress")
     try:
         data = hotlists.fetch_hotlist(parsed)
         trace.log("tool", f"fetch_hotlist（{parsed.get('source') or '综合'}）",
                   detail=f"{len(data.get('sections', []))} 个数据源", status="ok")
     except Exception as e:
         trace.log("tool", f"fetch_hotlist 失败：{e}", status="error")
-        print(f"[Agent] 抱歉，榜单抓取失败了：{e}")
+        say(sink, f"[Agent] 抱歉，榜单抓取失败了：{e}", "error")
         return
 
     from .main import _ask_report, _hotlist_topic
-    print()
-    print(digest.make_hotlist_digest(data, _hotlist_topic(parsed)))
+    say(sink, digest.make_hotlist_digest(data, _hotlist_topic(parsed)), "digest")
     if not data["sections"]:
         out = hotlists.write_hotlist(data)
         trace.log("finish", f"无数据，失败留档：{out}", status="note")
-        print(f"[Agent] 抱歉，所有热榜数据源都暂时不可用，已留档：{out}")
+        say(sink, f"[Agent] 抱歉，所有热榜数据源都暂时不可用，已留档：{out}", "error")
         return
-    if _ask_report():
+    if not interactive or _ask_report():
         out = hotlists.write_hotlist(data)
         memory.remember_fact("last_report", out)
         memory.remember_fact("last_query_intent", {
@@ -233,12 +233,13 @@ def _run_hotlist(parsed: dict, memory) -> None:
             "time_window": parsed.get("time_window", "今天"),
         })
         trace.log("finish", f"报告已保存：{out}")
-        print(f"[Agent] 完成！榜单报告已保存：{out}。还有什么需要帮忙的吗？")
+        say(sink, f"[Agent] 完成！榜单报告已保存：{out}。还有什么需要帮忙的吗？", "agent")
     else:
-        print(f"[Agent] 好的，速递就到这里。还有什么需要帮忙的吗？")
+        say(sink, "[Agent] 好的，速递就到这里。还有什么需要帮忙的吗？", "agent")
 
 
-def _run_research(parsed: dict, memory, is_reflect: bool = False) -> None:
+def _run_research(parsed: dict, memory, sink=None, is_reflect: bool = False,
+                  interactive: bool = True) -> None:
     """research 任务：拆解 → 并行执行 → 覆盖率检查（反思）→ 汇总 → 完成判定。"""
     trace = get_trace()
 
@@ -253,28 +254,27 @@ def _run_research(parsed: dict, memory, is_reflect: bool = False) -> None:
             subtopics = [(s, "") for s in scenario["default_subtopics"][:5]]
         scenario["_subtopics"] = subtopics
 
-        result = research.run_research(scenario)
+        result = research.run_research(scenario, sink=sink)
     except BudgetExceeded as e:
-        print(f"[Agent] {e}")
+        say(sink, f"[Agent] {e}", "error")
         return
     except Exception as e:
-        print(f"[Agent] 抱歉，执行失败了：{e}。您可以换个主题试试。")
+        say(sink, f"[Agent] 抱歉，执行失败了：{e}。您可以换个主题试试。", "error")
         return
 
     # REFLECT：覆盖率检查（仅首轮；重试轮不再递归反思，保证终止）
     if not is_reflect:
-        _reflect_research(scenario, result, memory)
+        _reflect_research(scenario, result, memory, sink=sink)
 
     # FINISH：输出速递 → 询问完整报告 → 记忆入库
-    print()
-    print(result["digest"])
+    say(sink, result["digest"], "digest")
     if not result["report"]:
         # 预算超限或汇总失败：只给速递，不生成报告
-        print("[Agent] （本次未生成完整报告：LLM 预算超限或汇总失败。速递已给出。）还有什么需要帮忙的吗？")
+        say(sink, "[Agent] （本次未生成完整报告：LLM 预算超限或汇总失败。速递已给出。）还有什么需要帮忙的吗？", "agent")
         return
     from .main import _ask_report
-    if _ask_report():
-        out = research.save_report(scenario, result["report"])
+    if not interactive or _ask_report():
+        out = research.save_report(scenario, result["report"], sink=sink)
         memory.remember_fact("last_report", out)
         memory.remember_fact("last_topic", scenario["topic"])
         memory.remember_fact("last_query_intent", {
@@ -282,12 +282,12 @@ def _run_research(parsed: dict, memory, is_reflect: bool = False) -> None:
             "time_window": scenario["time_window"],
         })
         trace.log("finish", f"报告已保存：{out}")
-        print(f"[Agent] 完成！报告已保存：{out}。还有什么需要帮忙的吗？")
+        say(sink, f"[Agent] 完成！报告已保存：{out}。还有什么需要帮忙的吗？", "agent")
     else:
-        print(f"[Agent] 好的，速递就到这里。还有什么需要帮忙的吗？")
+        say(sink, "[Agent] 好的，速递就到这里。还有什么需要帮忙的吗？", "agent")
 
 
-def _reflect_research(scenario: dict, result: dict, memory) -> None:
+def _reflect_research(scenario: dict, result: dict, memory, sink=None) -> None:
     """第四阶段：反思纠错。检查子问题覆盖率，预算允许时换关键词重试缺失项。
 
     完成判定：全部子问题都有要点 → 达标；否则在预算与轮次上限内重试缺失项。
@@ -299,18 +299,18 @@ def _reflect_research(scenario: dict, result: dict, memory) -> None:
     missing = [r for r in result["_workers"] if not r.get("key_points")]
     if not missing:
         trace.log("reflect", f"覆盖率达标：{len(covered)}/{len(result['_workers'])} 个子问题有要点")
-        print(f"[反思] 覆盖率 {len(covered)}/{len(result['_workers'])}，全部子问题均有要点，无需重试。")
+        say(sink, f"[反思] 覆盖率 {len(covered)}/{len(result['_workers'])}，全部子问题均有要点，无需重试。", "reflection")
         return
 
     trace.log("reflect",
               f"覆盖率不足：{len(covered)}/{len(result['_workers'])}",
               detail="缺失子问题：" + "、".join(r["subtopic"][:20] for r in missing),
               status="note")
-    print(f"[反思] 覆盖率 {len(covered)}/{len(result['_workers'])}，{len(missing)} 个子问题未获取到要点。")
+    say(sink, f"[反思] 覆盖率 {len(covered)}/{len(result['_workers'])}，{len(missing)} 个子问题未获取到要点。", "reflection")
     if len(missing) >= len(result["_workers"]):
         # 全部失败：不无脑重试（可能是网络/源故障），直接收敛并说明
         trace.log("finish", "全部子问题无结果，收敛输出（可能是数据源故障）", status="note")
-        print("[Agent] 本次调研所有子问题都未获取到可靠信息（可能是搜索源临时故障），已按现有结果输出，您也可以换个主题重试。")
+        say(sink, "[Agent] 本次调研所有子问题都未获取到可靠信息（可能是搜索源临时故障），已按现有结果输出，您也可以换个主题重试。", "agent")
         return
     if not budget.in_task or budget.remaining <= 0:
         trace.log("finish", "预算不足，跳过反思重试", status="note")
@@ -320,9 +320,9 @@ def _reflect_research(scenario: dict, result: dict, memory) -> None:
     for rnd in range(1, MAX_REFLECT_ROUNDS + 1):
         retry_items = [(r["subtopic"], "") for r in missing]
         trace.log("reflect", f"第 {rnd} 轮反思：重试 {len(retry_items)} 个缺失子问题（换更宽泛关键词）")
-        print(f"[反思] 第 {rnd} 轮反思：{len(missing)} 个子问题未获取到可靠信息，换更宽泛关键词重试...")
+        say(sink, f"[反思] 第 {rnd} 轮反思：{len(missing)} 个子问题未获取到可靠信息，换更宽泛关键词重试...", "reflection")
         try:
-            new_results = research.retry_missing(scenario, retry_items)
+            new_results = research.retry_missing(scenario, retry_items, sink=sink)
         except BudgetExceeded:
             trace.log("finish", "反思重试超出预算，收敛", status="note")
             break
@@ -338,7 +338,7 @@ def _reflect_research(scenario: dict, result: dict, memory) -> None:
                 result["report"] = research.synthesize(result["_workers"], scenario2)
                 result["digest"] = digest.make_research_digest(result["_workers"], scenario2)
                 trace.log("reflect", f"重试恢复 {len(recovered)} 个子问题，已重新汇总")
-                print(f"[反思] 重试恢复 {len(recovered)} 个子问题，已重新汇总。")
+                say(sink, f"[反思] 重试恢复 {len(recovered)} 个子问题，已重新汇总。", "reflection")
             except Exception:
                 trace.log("reflect", "重新汇总失败，沿用首轮结果", status="error")
         break  # 反思只跑 1 轮，保证终止
@@ -348,14 +348,14 @@ def _reflect_research(scenario: dict, result: dict, memory) -> None:
 # ---------------------------------------------------------------------------
 # 顶层入口
 # ---------------------------------------------------------------------------
-def run_preset(intent_data: dict, memory) -> None:
+def run_preset(intent_data: dict, memory, sink=None) -> None:
     """快捷命令入口（daily/weekly/monthly）：预置意图直接执行，含预算与轨迹。"""
     trace = get_trace()
     trace.enter_task("research", intent_data.get("title", "快捷调研"))
     try:
         scenario = research.build_scenario(intent_data)
-        result = research.run_research(scenario)
-        out = research.save_report(scenario, result["report"])
+        result = research.run_research(scenario, sink=sink)
+        out = research.save_report(scenario, result["report"], sink=sink)
         memory.remember_fact("last_report", out)
         memory.remember_fact("last_topic", scenario["topic"])
         memory.remember_fact("last_query_intent", {
@@ -363,19 +363,23 @@ def run_preset(intent_data: dict, memory) -> None:
             "time_window": scenario["time_window"],
         })
         trace.log("finish", f"报告已保存：{out}")
-        print(f"[Agent] 完成！报告已保存：{out}")
+        say(sink, f"[Agent] 完成！报告已保存：{out}", "agent")
     except BudgetExceeded as e:
-        print(f"[Agent] {e}")
+        say(sink, f"[Agent] {e}", "error")
     except Exception as e:
-        print(f"[Agent] 执行失败：{e}")
+        say(sink, f"[Agent] 执行失败：{e}", "error")
     finally:
         trace.finish_task()
 
 
-def handle_task(user_input: str, memory) -> None:
+def handle_task(user_input: str, memory, sink=None, interactive: bool = True) -> None:
     """处理一轮任务类请求（main 已排除退出/猜谜/趣味）。
 
     每轮重新走五阶段：理解 → 计划 → 执行 → 反思 → 完成。
+
+    sink：事件输出接收器（None 时打印到终端，行为不变）
+    interactive：True 时调研/榜单完成后询问"是否生成完整报告"（终端）；
+                 False 时直接生成（网页/微信等无输入交互的入口）。
     """
     trace = get_trace()
     budget = get_budget()
@@ -383,12 +387,12 @@ def handle_task(user_input: str, memory) -> None:
     memory.remember_user(user_input)
     budget.enter_task("task")  # 任务级预算记账（chat/daily 也计入，防失控）
     try:
-        _handle_task_inner(user_input, memory)
+        _handle_task_inner(user_input, memory, sink=sink, interactive=interactive)
     finally:
         budget.exit_task()
 
 
-def _handle_task_inner(user_input: str, memory) -> None:
+def _handle_task_inner(user_input: str, memory, sink=None, interactive: bool = True) -> None:
     trace = get_trace()
 
     # 指代解析：把「第二条/刚才那个/那个报告」补全为记忆中的对象
@@ -398,27 +402,27 @@ def _handle_task_inner(user_input: str, memory) -> None:
     try:
         parsed = _understand(resolved_input, memory)
     except BudgetExceeded as e:
-        print(f"[Agent] {e}")
+        say(sink, f"[Agent] {e}", "error")
         return
 
     if parsed.get("intent") == "clarify":
-        print(f"[Agent] {parsed.get('question') or _clarify_question()}")
+        say(sink, f"[Agent] {parsed.get('question') or _clarify_question()}", "agent")
         return
 
     # PLAN（research 的拆解在 _plan 内完成）
     plan = _plan(parsed, resolved_input, memory)
-    _show_plan(plan, parsed)
+    _show_plan(plan, parsed, sink=sink)
 
     # 执行与收敛
     if parsed["intent"] == "chat":
-        _run_chat(resolved_input, memory)
+        _run_chat(resolved_input, memory, sink=sink)
     elif parsed["intent"] == "daily":
-        _run_daily(parsed["daily"], memory)
+        _run_daily(parsed["daily"], memory, sink=sink)
     elif parsed["intent"] == "hotlist":
-        _run_hotlist(parsed, memory)
+        _run_hotlist(parsed, memory, sink=sink, interactive=interactive)
     else:
         parsed["_user_input"] = resolved_input
-        _run_research(parsed, memory)
+        _run_research(parsed, memory, sink=sink, interactive=interactive)
 
     trace.finish_task()
-    print("[摘要] " + trace.render_summary())
+    say(sink, "[摘要] " + trace.render_summary(), "summary")

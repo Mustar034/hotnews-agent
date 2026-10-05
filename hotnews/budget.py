@@ -100,9 +100,18 @@ class Budget:
         )
 
 
-# 全局共享实例（模块级单例，进程内唯一）
+# 全局共享实例（模块级单例，进程内唯一；Web 模式经会话上下文覆盖）
 _budget = Budget()
 
 
 def get_budget() -> Budget:
+    """取当前会话的 Budget：有会话上下文用上下文实例，否则用模块单例。
+
+    模块单例保证终端模式（每进程一个会话）行为不变；
+    上下文实例保证 Web 多会话并发时预算互不干扰。
+    """
+    from .context import get_context  # 局部导入避免循环依赖
+    ctx = get_context()
+    if ctx is not None and ctx.budget is not None:
+        return ctx.budget
     return _budget

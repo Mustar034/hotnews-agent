@@ -20,6 +20,7 @@
 | 🔍 反思纠错 | 调研后检查子问题覆盖率，缺失项自动换关键词重试 | 部分子问题无结果时自动补搜并重新汇总 |
 | 💰 成本预算 | 会话/任务两级 LLM 调用上限，超限自动收敛并说明 | 退出时输出调用次数与估算费用 |
 | 💾 会话记录 | 每次对话自动存档为 markdown，文件夹按"开始~结束时间"命名 | 退出时提示保存路径；下次启动自动开启新一轮 |
+| 🌐 Web 版 | 浏览器交互式对话：SSE 流式展示计划/运行过程/速递，自动生成报告 | `npm run dev`（Vite）+ `python -m hotnews.web_api` |
 | 🤝 诚实降级 | 做不到的事说明原因并给替代方案，绝不假装成功 | 热榜无历史数据 → 自动转资讯调研；未知城市 → 提示支持列表 |
 
 ---
@@ -59,6 +60,23 @@ python -m hotnews monthly    # 快捷：本月 OpenAI 动态
 ```
 
 生成的报告为 Markdown 文件，保存在当前工作目录，文件名规范：`{时间}_{主题}_{起始日期}.md`，如 `weekly_ai_2026-09-21.md`。
+
+### Web 版（浏览器对话）
+
+核心引擎已解耦为事件流（`engine.py`），网页与终端共用同一套五阶段逻辑：
+
+```bash
+# 1. 启动后端（FastAPI，SSE 流式接口）
+python -m hotnews.web_api            # http://127.0.0.1:8000
+
+# 2. 开发模式启动前端（另开一个终端）
+cd web && npm install && npm run dev # http://127.0.0.1:5173
+
+# 3. 或构建前端产物后由后端直接托管（仅需跑后端）
+cd web && npm run build              # 产物在 web/dist，后端自动托管
+```
+
+接口：`POST /api/chat`（SSE 流式返回计划/进度/速递/摘要事件）、`GET /api/sessions`、`GET /api/sessions/{id}/messages`、`GET /api/reports`。Web 会话在内存中（进程重启即清空），每会话独立预算与记忆，互不干扰。
 
 ### 会话记录与退出
 
@@ -163,7 +181,11 @@ hotnews/
 ├── __main__.py       python -m hotnews 入口
 ├── main.py           对话主循环（退出/猜谜/趣味状态机）、会话记录、结束语与自动关终端
 ├── agent_core.py     Agent 核心循环：UNDERSTAND→PLAN→EXECUTE→REFLECT→FINISH
+├── engine.py         引擎层：多会话管理 + 事件流入口（网页/微信共用，会话隔离）
+├── events.py         事件模型与输出接收器（Terminal/Buffer/Queue，终端与 SSE 解耦）
+├── context.py        会话上下文（contextvars：每会话独立 budget/trace/memory/sink）
 ├── session_log.py    会话记录：markdown 存档，文件夹按「开始~结束时间」命名
+├── web_api.py        FastAPI 后端：SSE 流式对话、会话/报告接口、静态托管前端
 ├── config.py         全局配置：API Key、模型、城市表、预算上限、重试、退出词、会话记录
 ├── budget.py         成本预算：LLM 调用计数 + 会话/任务两级上限 + 估算统计
 ├── memory.py         会话记忆：对话历史 + 事实记忆 + 指代解析（"第二条"/"那个报告"）
@@ -178,18 +200,12 @@ hotnews/
 ├── weather.py        天气查询：中国天气网 7 天预报解析
 ├── facts.py          日常事实：周几/日期/节日倒计时/城市识别
 ├── fun.py            趣味功能：笑话库、谜语库、GBK 安全颜文字、结束语模板
-└── (tests/smoke_agent.py  本地回归冒烟测试：mock LLM/搜索，验证五阶段与预算/反思路径，不入库)
-```
+└── (tests/smoke_agent.py / smoke_engine.py  本地回归冒烟测试，不入库)
 
-依赖关系（无循环）：
-
-```
-config ← budget ← llm ← intent ─┐
-      ← trace ← tools ──────────┤
-      ← memory ← agent_core ────┼→ main
-      ← session_log ────────────┘
-      ← search ← research
-      ← hotlists / weather / facts / fun
+web/                        Vue3 前端（Vite）
+├── src/App.vue             对话界面：SSE 流式渲染（计划折叠/运行过程/速递/摘要）
+├── vite.config.js          开发代理 /api → FastAPI
+└── dist/                   构建产物（由 web_api.py 自动托管）
 ```
 
 ### 关键技术点
@@ -245,7 +261,8 @@ config ← budget ← llm ← intent ─┐
 ## 🧪 回归测试
 
 ```bash
-python tests/smoke_agent.py   # mock LLM 与搜索，验证五阶段循环/澄清/指代/反思重试/预算限额
+python tests/smoke_agent.py    # mock LLM/搜索：终端五阶段/澄清/指代/反思重试/预算/省略句
+python tests/smoke_engine.py   # 引擎层：事件流/会话隔离/流式队列/JSON 序列化
 ```
 
 ---

@@ -20,6 +20,10 @@ conversations/
 # 测试文件（不入库）
 tests/
 
+# 前端依赖与构建产物
+web/node_modules/
+web/dist/
+
 # 临时文件
 *.log
 tmp/

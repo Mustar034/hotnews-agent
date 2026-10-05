@@ -7,12 +7,14 @@ run_research 返回速递+完整报告文本（不写文件），save_report 负
 反思纠错支持：run_research 返回 worker 明细（_workers）供上层做覆盖率检查；
 retry_missing 对缺失子问题用更宽泛关键词重搜重提炼（受预算约束）。
 """
+import contextvars
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from . import digest
 from .budget import BudgetExceeded
 from .config import MAX_WORKERS, SEARCH_LIMIT
+from .events import say
 from .llm import call_llm, call_llm_json, parse_json_llm
 from .search import fetch_hackernews, fetch_hackernews_query, fetch_sspai, search
 from .time_utils import clean_time_words, date_range_of, normalize_window, time_expr
@@ -153,45 +155,51 @@ def synthesize(results: list[dict], scenario: dict) -> str:
     return call_llm(sys_p, json.dumps(results, ensure_ascii=False, indent=2), temperature=0.5)
 
 
-def run_research(scenario: dict) -> dict:
+def run_research(scenario: dict, sink=None) -> dict:
     """执行一次完整调研：拆解（或复用已拆解子问题）→ 并行 Worker → 汇总。
 
     返回 {"digest", "report", "file_name", "_workers"}（不写文件）。
     _workers 为各子问题明细，供上层反思纠错（覆盖率检查）。
     预算超限（BudgetExceeded）时按已完成的 worker 部分收敛，不中断进程。
+
+    sink：事件输出接收器；None 时打印到终端（与改造前行为一致）。
     """
-    print(f"[任务] {scenario['title']}（时间范围：{time_expr(scenario['date_range'])}）")
-    print("[主Agent] 拆解任务...")
+    say(sink, f"[任务] {scenario['title']}（时间范围：{time_expr(scenario['date_range'])}）", "progress")
+    say(sink, "[主Agent] 拆解任务...", "progress")
     if scenario.get("_subtopics"):
         subtopics = scenario["_subtopics"]
-        print("[主Agent] 复用已拆解的子问题（不重复调用 LLM）")
+        say(sink, "[主Agent] 复用已拆解的子问题（不重复调用 LLM）", "progress")
     else:
         subtopics = decompose(scenario)
     if not subtopics:  # 双保险：decompose 兜底失败时直接用默认拆分
         subtopics = [(s, "") for s in scenario["default_subtopics"][:5]]
-    print(f"[主Agent] 子问题：{[s for s, _ in subtopics]}")
+    say(sink, f"[主Agent] 子问题：{[s for s, _ in subtopics]}", "progress")
 
-    print(f"[调度] 并行启动 {min(MAX_WORKERS, len(subtopics))} 个调研 Worker...")
+    say(sink, f"[调度] 并行启动 {min(MAX_WORKERS, len(subtopics))} 个调研 Worker...", "progress")
     results = []
     partial = False
+    # 每个 Worker 任务各自复制当前会话上下文（contextvars.Context 不能重复 run）
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        futures = {pool.submit(research_worker, item, scenario): item for item in subtopics}
+        futures = {
+            pool.submit(contextvars.copy_context().run, research_worker, item, scenario): item
+            for item in subtopics
+        }
         for fut in as_completed(futures):
             try:
                 r = fut.result()
             except BudgetExceeded:
-                print("[调度] LLM 预算超限，按已完成的 Worker 部分收敛（不中断）")
+                say(sink, "[调度] LLM 预算超限，按已完成的 Worker 部分收敛（不中断）", "progress")
                 partial = True
                 break
             results.append(r)
             status = f"{len(r['key_points'])} 条要点" if r["key_points"] else f"无可用信息({r.get('error', '搜索结果不相关')})"
-            print(f"[Worker] 完成：{r['subtopic']} → {status}")
+            say(sink, f"[Worker] 完成：{r['subtopic']} → {status}", "progress")
 
-    print("[汇总Agent] 生成报告...")
+    say(sink, "[汇总Agent] 生成报告...", "progress")
     try:
         report = synthesize(results, scenario)
     except BudgetExceeded:
-        print("[汇总Agent] 预算超限，跳过 LLM 汇总，输出速递兜底")
+        say(sink, "[汇总Agent] 预算超限，跳过 LLM 汇总，输出速递兜底", "progress")
         report = ""
         partial = True
 
@@ -204,7 +212,7 @@ def run_research(scenario: dict) -> dict:
     }
 
 
-def retry_missing(scenario: dict, items: list[tuple[str, str]]) -> list[dict]:
+def retry_missing(scenario: dict, items: list[tuple[str, str]], sink=None) -> list[dict]:
     """反思纠错：对缺失子问题用更宽泛的关键词重搜、重提炼。
 
     items 为 [(subtopic, keywords)]，keywords 为空时用更宽泛策略：
@@ -222,14 +230,15 @@ def retry_missing(scenario: dict, items: list[tuple[str, str]]) -> list[dict]:
         broadened.append((subtopic, core))
     results = []
     for item in broadened:
-        r = research_worker(item, scenario)
+        # 每次单独复制上下文（Context 不能重复 run）
+        r = contextvars.copy_context().run(research_worker, item, scenario)
         results.append(r)
         status = f"{len(r['key_points'])} 条要点" if r["key_points"] else "仍无可用信息"
-        print(f"[Worker-重试] {r['subtopic']} → {status}")
+        say(sink, f"[Worker-重试] {r['subtopic']} → {status}", "progress")
     return results
 
 
-def save_report(scenario: dict, report: str) -> str:
+def save_report(scenario: dict, report: str, sink=None) -> str:
     """把调研报告文本写入 md 文件，返回文件路径。"""
     out_path = scenario["file_name"]
     # 避免标题重复：LLM 自带 "# 标题" 时不再叠加脚本标题
@@ -244,5 +253,5 @@ def save_report(scenario: dict, report: str) -> str:
         )
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(content)
-    print("[完成] 报告已保存：" + out_path)
+    say(sink, "[完成] 报告已保存：" + out_path, "progress")
     return out_path

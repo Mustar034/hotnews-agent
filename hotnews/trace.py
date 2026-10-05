@@ -97,9 +97,14 @@ class Trace:
         )
 
 
-# 全局共享实例
+# 全局共享实例（模块级单例，进程内唯一；Web 模式经会话上下文覆盖）
 _trace = Trace()
 
 
 def get_trace() -> Trace:
+    """取当前会话的 Trace：有会话上下文用上下文实例，否则用模块单例。"""
+    from .context import get_context  # 局部导入避免循环依赖
+    ctx = get_context()
+    if ctx is not None and ctx.trace is not None:
+        return ctx.trace
     return _trace
