@@ -60,7 +60,17 @@ def run_brief(date_spec: str = "yesterday", theme: str = "ai",
     # 都用目标日期，而不是生成时刻的"今天"）
     engine = get_engine()
     sid = engine.create_session()
-    msg = f"昨天（{human_date(iso)}）{theme} 方向有哪些值得关注的科技新闻？"
+    # 明确要求"AI 前沿"，让 intent 解析/拆解/提炼全程聚焦模型与突破，
+    # 而不是泛 AI 社会新闻（避税/伦理/性别/监管等边缘话题）
+    if theme in ("ai", "AI", "人工智能"):
+        msg = (
+            f"昨天（{human_date(iso)}）AI 前沿有哪些值得关注的新进展？"
+            "重点：新模型发布/升级（如 OpenAI、DeepSeek、Anthropic、Google、Meta 等），"
+            "开源模型、论文与算法突破、AI 硬件与推理效率、开发者工具与 API 更新；"
+            "不要泛 AI 社会新闻（伦理争议、监管政策、避税诉讼、性别文化议题等）。"
+        )
+    else:
+        msg = f"昨天（{human_date(iso)}）{theme} 方向有哪些值得关注的科技新闻？"
     qsink, thread = engine.start_ask(sid, msg, interactive=False)
 
     digest_parts: list[str] = []

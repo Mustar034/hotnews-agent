@@ -67,9 +67,7 @@ def make_research_digest(results: list[dict], scenario: dict) -> str:
         return f"{_header(topic)}\n本次调研未获取到可展示的速递条目。\n"
 
     relaxed = any(r.get("_single_day_note") == "relaxed" for r in results)
-    note = ""
-    if relaxed:
-        note = f"（今日发布的新闻较少，以下为最近 1 天内容，日期已逐条标注）\n"
+    # 放宽场景只影响日期标注严格度，不再输出"最近1天"提示句（用户明确不要）
     sys_p = (
         "你是资深科技媒体编辑，把下面的调研要点整理成『速递』风格。要求：\n"
         "1. 逐条编号输出（4~8条），每条格式：\n"
@@ -86,10 +84,10 @@ def make_research_digest(results: list[dict], scenario: dict) -> str:
     except Exception:
         raw = ""
     if raw:
-        return f"{_header(topic)}\n{note}{raw}\n"
+        return f"{_header(topic)}\n{raw}\n"
     # LLM 失败兜底：直接列要点
     lines = [f"{i + 1} {b[2:]}" for i, b in enumerate(blocks[:DIGEST_MAX])]
-    return f"{_header(topic)}\n{note}" + "\n".join(lines) + "\n"
+    return f"{_header(topic)}\n" + "\n".join(lines) + "\n"
 
 
 def make_hotlist_digest(data: dict, topic: str = "") -> str:

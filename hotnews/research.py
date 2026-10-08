@@ -73,11 +73,25 @@ def build_scenario(intent: dict) -> dict:
     dr = date_range_of(window_kind)
     topic = intent.get("topic", "全网热点")
     title = intent.get("title", f"{topic}资讯汇总")
-    subtopics = intent.get("subtopics") or [
-        "最值得关注的热点事件",
-        "重要的行业动态与数据",
-        "前沿进展或争议话题",
-    ]
+    # AI 主题：默认拆解角度聚焦"前沿进展"（新模型/大厂/论文/硬件/生态），
+    # 而非泛 AI 社会新闻；非 AI 主题保持原通用角度
+    slug = intent.get("topic_slug", "general")
+    topic_text = f"{topic} {slug}"
+    is_ai = slug == "ai" or "ai" in topic_text.lower() or "人工智能" in topic_text
+    if is_ai:
+        subtopics = intent.get("subtopics") or [
+            "头部 AI 公司新动态（OpenAI / DeepSeek / Anthropic / Google / Meta）",
+            "新模型与大模型进展（发布、升级、开源、评测基准）",
+            "AI 研究与突破（arXiv 论文、新方法、效率与推理优化）",
+            "AI 硬件与算力（芯片、训练集群、推理成本下降）",
+            "AI 应用与开发者生态（本地推理、工具链、API 更新）",
+        ]
+    else:
+        subtopics = intent.get("subtopics") or [
+            "最值得关注的热点事件",
+            "重要的行业动态与数据",
+            "前沿进展或争议话题",
+        ]
     span_days = (dr[1] - dr[0]).days
     return {
         "title": title,
@@ -85,10 +99,11 @@ def build_scenario(intent: dict) -> dict:
         "topic_en": intent.get("topic_en", ""),
         "time_window": window_kind,
         "time_slug": time_slug,
-        "topic_slug": intent.get("topic_slug", "general"),
+        "topic_slug": slug,
         "date_range": dr,
         "span_days": span_days,
         "default_subtopics": subtopics,
+        "focus": "ai_frontier" if is_ai else "",
         "report_prompt": (
             "结构：核心动态(3~5条) → 分主题详情 → 趋势或影响判断(1~2条)。"
             "每条要点标注来源URL。"
@@ -187,6 +202,13 @@ def research_worker(item, scenario: dict) -> dict:
             "7. 若搜索结果与子问题相关，即使没有近期新闻，也应提炼出与该主题相关的背景要点并注明日期；"
             "只有完全无关时才输出空数组。注意：平台登录页/功能页/客服页/无关产品页等与主题无关的内容，必须视为无关并输出空数组，"
             "不得硬凑要点。"
+            + (
+                "\n8. 本调研聚焦 AI 前沿进展。优先提炼：新模型发布/升级/开源、头部公司产品与 API 动态、"
+                "论文与算法突破、AI 硬件与推理效率、开发者工具与本地推理。"
+                "以下边缘新闻不要输出为要点：AI 引发的社会争议/伦理讨论/监管政策/避税诉讼/"
+                "性别文化议题等泛 AI 社会新闻（除非是直接影响模型发展的重大事件）。"
+                if scenario.get("focus") == "ai_frontier" else ""
+            )
         )
         # guard=True：搜索结果来自外部网页，必须带注入防护声明
         raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}", guard=True)
