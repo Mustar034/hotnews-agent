@@ -29,29 +29,43 @@ from .time_utils import clean_time_words, date_range_of, normalize_window, point
 # 单日窗口：key_points 里出现这些字样直接剔除（LLM 标记的背景条目）
 _BACKGROUND_MARKERS = ("背景，非本期", "背景,非本期", "非本期", "背景条目")
 
+# Bing 泛搜噪音：导航站/科普页/入口页/词条等非新闻内容标题特征（新闻调研一律剔除）
+_NOISE_MARKERS = (
+    "导航", "大全", "合集", "入口", "词条", "是什么", "是什么意思",
+    "持续分享", "收录", "目录", "wiki", "WIKI", "百科",
+)
+
+
+def _is_noise(title: str) -> bool:
+    return any(m in title for m in _NOISE_MARKERS)
+
 
 def _filter_single_day(results: list[dict], window_date: datetime,
                        allow_prev_days: int = 1) -> list[dict]:
     """确定性兜底：单日窗口只保留『当天』要点，剔除旧日期与背景标注。
 
-    两级策略（解决"周一早上当天新闻少导致全空"的现实问题）：
+    三级策略（解决"周一早上当天新闻少导致全空"的现实问题）：
       1. 严格：凡要点中解析出日期且不是 window_date，或含背景标记，一律剔除；
          没有明确日期的要点也剔除（单日窗口无法证明它是当天的，宁缺毋滥）；
       2. 若严格后所有 worker 的当天要点为 0，放宽到最近 allow_prev_days 天
-         （保留明确日期在窗口日±[0,allow_prev_days] 内的要点），并给每个
-         result 附加 _single_day_note="relaxed"，供速递如实标注"含最近N天"。
+         （保留明确日期在窗口日±[0,allow_prev_days] 内的要点）；
+      3. 若仍为空，再放宽到最近 3 天；依然为空才保留无日期要点
+         （标注"日期不详"，避免速递整条空白）。
     不依赖 LLM 自觉（LLM 提炼规则可能被绕过）。
     """
     want = f"{window_date:%Y-%m-%d}"
     relaxed_min = f"{(window_date - timedelta(days=allow_prev_days)):%Y-%m-%d}"
+    loose_min = f"{(window_date - timedelta(days=3)):%Y-%m-%d}"
 
-    def clean(r: dict, lo: str, hi: str) -> dict:
+    def clean(r: dict, lo: str, hi: str, keep_no_date: bool = False) -> dict:
         kps = []
         for kp in r.get("key_points", []):
             if any(mark in kp for mark in _BACKGROUND_MARKERS):
                 continue
             d = point_date(kp)
             if d is None:
+                if keep_no_date:
+                    kps.append(kp)
                 continue
             if lo <= d <= hi:
                 kps.append(kp)
@@ -60,11 +74,17 @@ def _filter_single_day(results: list[dict], window_date: datetime,
     strict = [clean(r, want, want) for r in results]
     if any(r["key_points"] for r in strict):
         return strict
-    # 放宽：保留明确日期在最近 allow_prev_days 天内的要点
+    # 放宽一：明确日期在最近 allow_prev_days 天内
     relaxed = [clean(r, relaxed_min, want) for r in results]
-    for r in relaxed:
-        r["_single_day_note"] = "relaxed"
-    return relaxed
+    if any(r["key_points"] for r in relaxed):
+        return relaxed
+    # 放宽二：最近 3 天
+    loose = [clean(r, loose_min, want) for r in results]
+    if any(r["key_points"] for r in loose):
+        return loose
+    # 兜底：保留无日期要点（标注日期不详），避免整条速递空白
+    fallback = [clean(r, "", "9999-12-31", keep_no_date=True) for r in results]
+    return fallback
 
 
 def build_scenario(intent: dict) -> dict:
@@ -79,6 +99,7 @@ def build_scenario(intent: dict) -> dict:
     topic_text = f"{topic} {slug}"
     is_ai = slug == "ai" or "ai" in topic_text.lower() or "人工智能" in topic_text
     if is_ai:
+        topic = "AI 前沿"  # 速递标题归一化（intent 解析常把长消息后半截带进 topic）
         subtopics = intent.get("subtopics") or [
             "头部 AI 公司新动态（OpenAI / DeepSeek / Anthropic / Google / Meta）",
             "新模型与大模型进展（发布、升级、开源、评测基准）",
@@ -157,18 +178,34 @@ def research_worker(item, scenario: dict) -> dict:
         results = search(query)[:SEARCH_LIMIT]
 
         # 补充源：HN 关键词（科研/技术）+ HN 热帖 + 少数派（按 URL 去重）
-        extra_sources = []
+        # hn_extra 单独留存：HN 条目 url 是原始内容链接（非 news.ycombinator.com），
+        # 供 LLM 判空时按来源兜底（Bing 泛搜不兜底，宁缺毋滥）
+        hn_extra: list[dict] = []
+        extra_sources: list[dict] = []
         if scenario.get("topic_en"):
-            extra_sources += fetch_hackernews_query(scenario["topic_en"], days=max(scenario["span_days"], 1))
+            hn_extra += fetch_hackernews_query(scenario["topic_en"], days=max(scenario["span_days"], 1))
         if scenario["span_days"] <= 7:
-            extra_sources += fetch_hackernews() + fetch_sspai()
-        seen = {r["url"] for r in results}
-        for extra in extra_sources:
-            if extra["url"] and extra["url"] not in seen:
-                results.append(extra)
-                seen.add(extra["url"])
-        results = results[:SEARCH_LIMIT + 6]
+            hn_extra += fetch_hackernews()
+            extra_sources = hn_extra + fetch_sspai()
+        else:
+            extra_sources = hn_extra
+        # AI 前沿主题：HN/官方源质量高于 Bing 泛搜，排前面优先被 LLM 提炼
+        primary, secondary = results, extra_sources
+        if scenario.get("focus") == "ai_frontier":
+            primary, secondary = extra_sources, results
+        merged: list[dict] = []
+        seen = set()
+        for r in primary + secondary:
+            u = r.get("url", "")
+            if u:
+                if u in seen:
+                    continue
+                seen.add(u)
+            merged.append(r)
+        results = merged[:SEARCH_LIMIT + 6]
 
+        # 剔除泛搜噪音（导航/科普/词条/入口等），避免 LLM 拿到无关内容或 fallback 捞回垃圾
+        results = [r for r in results if not _is_noise(r.get("title", ""))]
         if not results:
             return {"subtopic": subtopic, "key_points": [], "sources": [], "error": "无搜索结果"}
 
@@ -211,12 +248,22 @@ def research_worker(item, scenario: dict) -> dict:
             )
         )
         # guard=True：搜索结果来自外部网页，必须带注入防护声明
-        raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}", guard=True)
+        raw = call_llm(sys_p, f"子问题：{subtopic}\n\n搜索结果：\n{context}",
+                       guard=True, temperature=0.2)
         data = parse_json_llm(raw, fallback={"key_points": [], "sources": []})
+        key_points = data.get("key_points", [])[:5]
+        sources = [u for u in data.get("sources", [])[:5] if u.startswith("http")]
+        # LLM 判空且 HN 有高质量标题时兜底（Bing 泛搜绝不捞回，宁缺毋滥）
+        if not key_points and hn_extra:
+            key_points = [
+                f"{r['title']}（日期不详）"
+                for r in hn_extra[:3] if r.get("title")
+            ]
+            sources = sources or [r["url"] for r in hn_extra[:3] if r.get("url")]
         result = {
             "subtopic": subtopic,
-            "key_points": data.get("key_points", [])[:5],
-            "sources": [u for u in data.get("sources", [])[:5] if u.startswith("http")],
+            "key_points": key_points,
+            "sources": sources,
         }
         # 单日窗口确定性兜底：只留当天要点（不依赖 LLM 自觉）
         if scenario["time_window"] in ("今天", "昨天", "前天"):

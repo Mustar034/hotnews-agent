@@ -66,8 +66,7 @@ def make_research_digest(results: list[dict], scenario: dict) -> str:
     if not blocks:
         return f"{_header(topic)}\n本次调研未获取到可展示的速递条目。\n"
 
-    relaxed = any(r.get("_single_day_note") == "relaxed" for r in results)
-    # 放宽场景只影响日期标注严格度，不再输出"最近1天"提示句（用户明确不要）
+    relaxed = any(r.get("_single_day_note") == "relaxed" for r in results)  # 兼容旧标记，不再输出提示句
     sys_p = (
         "你是资深科技媒体编辑，把下面的调研要点整理成『速递』风格。要求：\n"
         "1. 逐条编号输出（4~8条），每条格式：\n"
