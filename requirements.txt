@@ -2,4 +2,4 @@ requests>=2.31
 beautifulsoup4>=4.12
 fastapi>=0.110
 uvicorn>=0.29
-qq-botpy>=1.17
+qq-botpy>=1.2
