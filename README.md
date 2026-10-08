@@ -121,14 +121,29 @@ python -m hotnews.brief --date 2026-10-04 --theme 生物        # 其他日期/�
 
 每天 8:00（北京时间）自动生成前一日 AI 科技速递并推送到 QQ 私聊，电脑关机也能跑：
 
-1. 把项目推到 GitHub（`git remote add origin <仓库地址> && git push`）。
+1. 把项目推到 GitHub（`git remote add origin <仓库地址> && git push -u origin main`）。
 2. 仓库 → Settings → Secrets and variables → Actions → 新增四个 Secret：
    - `LLM_API_KEY`：你的 DeepSeek Key
    - `QQ_APP_ID` / `QQ_APP_SECRET`：QQ 开放平台机器人凭据
-   - `QQ_TARGET_OPENID`：速递接收人的 openid（先从本地 `data/qq_target_openid.json` 查，或直接 `.env` 里配置）
+   - `QQ_TARGET_OPENIDS`：速递接收人 openid，逗号分隔可多接收人（先从本地 `data/qq_target_openid.json` 查，或直接 `.env` 里配置）
 3. 推送后 `.github/workflows/daily_brief.yml` 会自动启用（`cron: "0 0 * * *"` 即 UTC 0:00 = 北京 8:00）。可在 Actions 页手动 `Run workflow` 先测一次。
 
 > 注意：GitHub Actions 免费额度每月 2000 分钟，每天一次任务耗约 1~3 分钟，完全在免费额度内。
+
+### 云端部署：关机也能对话 + 速递
+
+GitHub Actions 只解决「定时速递」；想让 **QQ 对话**也在本机关机后可用，把监听放到一台 7×24 的云服务器上（`scripts/deploy_server.sh` 一键部署，systemd 开机自启 + 崩溃自动重启，无需开放入站端口）：
+
+```bash
+# 服务器（Ubuntu 22.04/24.04）上执行：
+git clone https://github.com/Mustar034/hotnews-agent.git /tmp/hn && cd /tmp/hn
+bash scripts/deploy_server.sh        # 第一次：拉代码+装依赖+生成 .env
+nano /opt/hotnews-agent/.env         # 填入 LLM_API_KEY / QQ_APP_ID / QQ_APP_SECRET
+bash scripts/deploy_server.sh        # 第二次：安装并启动 systemd 服务
+journalctl -u hotnews-qqbot -f       # 看到"已连接 QQ 开放平台"即成功
+```
+
+详细步骤见 `scripts/deploy_server.md`（含服务器选购建议、服务器端 crontab 速递、GitHub Actions 两种速递方式对比）。
 
 ### 会话记录与退出
 

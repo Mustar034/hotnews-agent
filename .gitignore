@@ -14,6 +14,7 @@ dist/
 *.md
 !README.md
 !hotnews/README.md
+!scripts/deploy_server.md
 
 # 会话记录（每次对话的 markdown 存档）
 conversations/

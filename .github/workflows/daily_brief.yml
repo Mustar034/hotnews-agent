@@ -26,5 +26,5 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           QQ_APP_ID: ${{ secrets.QQ_APP_ID }}
           QQ_APP_SECRET: ${{ secrets.QQ_APP_SECRET }}
-          QQ_TARGET_OPENID: ${{ secrets.QQ_TARGET_OPENID }}
+          QQ_TARGET_OPENIDS: ${{ secrets.QQ_TARGET_OPENIDS }}
         run: python -m hotnews.brief --date yesterday --theme ai --push

@@ -1,0 +1,19 @@
+[Unit]
+Description=HotNews QQ Bot Listener (QQ 机器人对话监听)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hotnews-agent
+# EnvironmentFile 读取 dotenv 格式的 .env（KEY=VALUE，不支持引号包裹的复杂值）
+EnvironmentFile=/opt/hotnews-agent/.env
+ExecStart=/opt/hotnews-agent/.venv/bin/python -m hotnews.qqbot
+Restart=always
+RestartSec=10
+# 崩溃自动重启、随系统开机自启（systemctl enable）
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
