@@ -22,9 +22,12 @@ conversations/
 # 测试文件（不入库）
 tests/
 
-# 运行时数据（QQ openid 绑定等）
-data/
+# 运行时数据（QQ openid 绑定等）；seen_brief.json 需入库（跨天去重状态）
+data/*
 !data/seen_brief.json
+
+# botpy SDK 运行时日志
+botpy.log*
 
 # 前端依赖与构建产物
 web/node_modules/

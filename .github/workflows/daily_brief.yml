@@ -4,7 +4,12 @@ on:
   schedule:
     # UTC 0:00 = 北京时间 08:00（GitHub Actions 使用 UTC）
     - cron: "0 0 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "目标日期（yesterday/today/YYYY-MM-DD），默认 yesterday"
+        required: false
+        default: "yesterday"
 
 permissions:
   contents: write   # 允许把跨天去重状态（data/seen_brief.json）写回仓库
@@ -30,7 +35,7 @@ jobs:
           QQ_APP_ID: ${{ secrets.QQ_APP_ID }}
           QQ_APP_SECRET: ${{ secrets.QQ_APP_SECRET }}
           QQ_TARGET_OPENIDS: ${{ secrets.QQ_TARGET_OPENIDS }}
-        run: python -m hotnews.brief --date yesterday --theme ai --days 3 --push
+        run: python -m hotnews.brief --date ${{ inputs.date || 'yesterday' }} --theme ai --days 3 --push
 
       - name: Persist dedup state (seen brief)
         run: |
