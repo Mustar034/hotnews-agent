@@ -87,8 +87,12 @@ def run_brief(date_spec: str = "yesterday", theme: str = "ai",
     content = "\n".join(digest_parts)
     content = fix_digest_header(content, iso)  # 标题日期显示目标日期而非生成时刻
     if push:
-        result = QQClient().push_brief(content)
-        print(f"[brief] 已推送到 QQ 单聊: msg_id={result.get('id')}")
+        results = QQClient().push_brief(content)  # list[dict]，每个接收人一条
+        for r in results:
+            if "error" in r:
+                print(f"[brief] 推送失败: openid={r.get('openid')} error={r.get('error')}")
+            else:
+                print(f"[brief] 已推送: msg_id={r.get('id')}")
     else:
         print(f"[brief] 未推送（--push 才会推送；已生成如下速递）：\n\n{content}")
     return content
