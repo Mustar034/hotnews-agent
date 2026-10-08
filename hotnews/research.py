@@ -89,8 +89,14 @@ def _filter_single_day(results: list[dict], window_date: datetime,
 
 def build_scenario(intent: dict) -> dict:
     """把意图解析结果组装成引擎可执行的场景配置。"""
-    window_kind, time_slug = normalize_window(intent.get("time_window", "今天"))
-    dr = date_range_of(window_kind)
+    if intent.get("date_range"):
+        # 显式日期范围（brief 定时速递等场景）：直接采用，不重新解析窗口
+        dr = (intent["date_range"][0], intent["date_range"][1])
+        window_kind = intent.get("time_window", "近3天")
+        time_slug = intent.get("time_slug", f"last{(dr[1] - dr[0]).days + 1}d")
+    else:
+        window_kind, time_slug = normalize_window(intent.get("time_window", "今天"))
+        dr = date_range_of(window_kind)
     topic = intent.get("topic", "全网热点")
     title = intent.get("title", f"{topic}资讯汇总")
     # AI 主题：默认拆解角度聚焦"前沿进展"（新模型/大厂/论文/硬件/生态），

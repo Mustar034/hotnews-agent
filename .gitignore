@@ -24,6 +24,7 @@ tests/
 
 # 运行时数据（QQ openid 绑定等）
 data/
+!data/seen_brief.json
 
 # 前端依赖与构建产物
 web/node_modules/
