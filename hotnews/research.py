@@ -261,10 +261,7 @@ def research_worker(item, scenario: dict) -> dict:
         sources = [u for u in data.get("sources", [])[:5] if u.startswith("http")]
         # LLM 判空且 HN 有高质量标题时兜底（Bing 泛搜绝不捞回，宁缺毋滥）
         if not key_points and hn_extra:
-            key_points = [
-                f"{r['title']}（日期不详）"
-                for r in hn_extra[:3] if r.get("title")
-            ]
+            key_points = [r["title"] for r in hn_extra[:3] if r.get("title")]
             sources = sources or [r["url"] for r in hn_extra[:3] if r.get("url")]
         result = {
             "subtopic": subtopic,
