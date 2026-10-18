@@ -158,5 +158,21 @@
  {
   "norm": "50年从业经历的广播人撰文介绍家中为ai部署的硬件配置背景个体算力自建样本pageslaportecloud月日",
   "date": "2026-10-16"
+ },
+ {
+  "norm": "deepseek在huggingface发布deepseekv41flash1017模型值得看新模型落地huggingfaceco月日",
+  "date": "2026-10-17"
+ },
+ {
+  "norm": "openrouter同步上线deepseekv41flash1017调用页面信号分发渠道跟进openrouterai月日",
+  "date": "2026-10-17"
+ },
+ {
+  "norm": "有文章讨论ai幻觉实为模型防御机制属观点性讨论而非实证突破注意非技术发布huggingfaceco月日",
+  "date": "2026-10-17"
+ },
+ {
+  "norm": "opencode遭黑客攻击致用户凭证泄露注意开发者工具安全风险huggingfaceco",
+  "date": "2026-10-17"
  }
 ]
