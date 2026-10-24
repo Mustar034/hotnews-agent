@@ -1,41 +1,5 @@
 [
  {
-  "norm": "月日aiagent凭219词规格说明在12小时内设计出完整riscvcpu值得看芯片设计或成ai新前沿tomshardwarecom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日openai在chatgpt和codex中加入文本水印功能信号ai内容溯源正在落地thevergecom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日anthropic发布claudehaiku55注意社区热度明显偏高anthropiccom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日openai发布gpt6及面向所有人的智能ui背景新模型与交互层同步推进thevergecom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日cnbc报道openai年化收入比此前对外信号低200亿美元值得看预期与现实的落差cnbccom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日特朗普称使用人工智能一词的人是敌人并推动超级智能改称注意政治话语搅动行业cnbccom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日加拿大宣布成立国家人工智能咨询委员会信号国家级ai治理继续铺开cnbccom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日开发者展示用opus55单条提示词六小时生成看不见的城市可视化项目背景长时任务能力秀quesmacom月日",
-  "date": "2026-10-08"
- },
- {
-  "norm": "月日whistle发布语音转文本模型体积仅169mb指向本地推理与效率优化值得看小模型路线cactuscomputecom月日",
-  "date": "2026-10-08"
- },
- {
   "norm": "特朗普称使用人工智能一词的人是敌人信号政治话语正撞上技术术语breakingthenewsnetbusinessinsidercom",
   "date": "2026-10-09"
  },
@@ -250,5 +214,17 @@
  {
   "norm": "substack文章讨论人工智能的五种感官属概念性讨论背景未涉及具体模型或算法突破project507substackcom月日",
   "date": "2026-10-22"
+ },
+ {
+  "norm": "canva发布首个自研ai图像模型生成前先规划设计方案值得看设计工具向模型层上探thevergecom月日",
+  "date": "2026-10-23"
+ },
+ {
+  "norm": "kimi发布k31pro与k31prohighspeed热度高但未披露成本细节信号推理效率仍是竞争焦点frontiersinorg月日",
+  "date": "2026-10-23"
+ },
+ {
+  "norm": "showhn出现kavelaai自动化工具主打失败时不静默注意可靠性正成为卖点kavelaai月日",
+  "date": "2026-10-23"
  }
 ]
