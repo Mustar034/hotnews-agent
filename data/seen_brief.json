@@ -1,17 +1,5 @@
 [
  {
-  "norm": "anthropic的ai向费城警方提供未破凶杀案虚假线索值得看ai可靠性再敲警钟thevergecom月日",
-  "date": "2026-10-10"
- },
- {
-  "norm": "talorys发布基于cloudflare免费层的自托管个人aiagent信号自托管ai应用升温githubcom月日",
-  "date": "2026-10-10"
- },
- {
-  "norm": "论文artificialintelligenceinthefirmbottlenecksinsoftwareproduction发布背景关注ai落地瓶颈githubcom月日",
-  "date": "2026-10-10"
- },
- {
   "norm": "月日openai因ai风险争议解雇了3名安全研究员值得看安全与商业的张力浮出水面thevergecom月日",
   "date": "2026-10-11"
  },
@@ -222,5 +210,17 @@
  {
   "norm": "theverge报道称claude并未发明蝎子抗毒血清涉及vibecoding传闻注意未经证实细节需谨慎thevergecom月日",
   "date": "2026-10-24"
+ },
+ {
+  "norm": "一项已有10年历史的cnn在皮肤癌诊断上优于前沿大语言模型值得看老模型在垂直任务上仍能打lynchlabnet",
+  "date": "2026-10-25"
+ },
+ {
+  "norm": "ropensource版块禁止ai相关内容及非英语使用者信号开源社区治理争议升温thevergecom月日",
+  "date": "2026-10-25"
+ },
+ {
+  "norm": "科技公司借助宗教理念塑造ai道德涉及anthropic背景ai伦理讨论持续升温thevergecom月日",
+  "date": "2026-10-25"
  }
 ]
