@@ -1,29 +1,5 @@
 [
  {
-  "norm": "月日openai因ai风险争议解雇了3名安全研究员值得看安全与商业的张力浮出水面thevergecom月日",
-  "date": "2026-10-11"
- },
- {
-  "norm": "月日anthropic的claude就费城一桩未破凶杀案提交了虚假线索注意模型幻觉已触及司法场景thevergecom月日",
-  "date": "2026-10-11"
- },
- {
-  "norm": "月日微软ceonadella称应假设所有ai模型都已被攻破信号厂商开始默认最坏安全假设thevergecom月日",
-  "date": "2026-10-11"
- },
- {
-  "norm": "研究探讨ai能否学会外科手术技艺背景具身智能向高精度操作延伸nytimescom",
-  "date": "2026-10-11"
- },
- {
-  "norm": "研究关注企业内部ai应用的软件生产瓶颈值得看落地卡点正被系统化拆解nytimescom",
-  "date": "2026-10-11"
- },
- {
-  "norm": "研究将ai视为一种编排系统信号从单模型转向多智能体协同nytimescom",
-  "date": "2026-10-11"
- },
- {
   "norm": "智谱发布glmlegal模型信号法律垂类成国产模型新战场zai月日",
   "date": "2026-10-12"
  },
@@ -222,5 +198,29 @@
  {
   "norm": "科技公司借助宗教理念塑造ai道德涉及anthropic背景ai伦理讨论持续升温thevergecom月日",
   "date": "2026-10-25"
+ },
+ {
+  "norm": "openai发布预印本论文称指数时间假设不成立pdf托管于github值得看理论计算机科学的大胆挑战githubcom月日",
+  "date": "2026-10-26"
+ },
+ {
+  "norm": "openai发文介绍数学计算机科学与物理学领域三项新发现信号基础研究正成为模型厂商新战场openaicom月日",
+  "date": "2026-10-26"
+ },
+ {
+  "norm": "openai发布新模型gpt61terra值得看新模型发布节奏明显加快openaicom月日",
+  "date": "2026-10-26"
+ },
+ {
+  "norm": "sebastianraschka发布从零构建推理模型的视频课程值得看推理模型开发门槛在降低magazinesebastianraschkacom月日",
+  "date": "2026-10-26"
+ },
+ {
+  "norm": "reddit开源社区封禁ai相关项目及非英语用户注意开源社区对ai内容态度趋紧tomshardwarecom",
+  "date": "2026-10-26"
+ },
+ {
+  "norm": "科技公司转向宗教以让ai道德良善背景ai伦理探索出现非常规路径thevergecom",
+  "date": "2026-10-26"
  }
 ]
