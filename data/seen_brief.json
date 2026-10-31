@@ -1,21 +1,5 @@
 [
  {
-  "norm": "meta发布musesparkopen研究博客为本期最高热度条目值得看开源模型热度压过产品更新researchmetaai月日",
-  "date": "2026-10-15"
- },
- {
-  "norm": "goodfire发布neuralnetworksareclean内容涉及神经网络相关研究信号可解释性方向持续升温researchmetaai月日",
-  "date": "2026-10-15"
- },
- {
-  "norm": "chatgpt新增可读取chrome标签页的功能属头部公司产品动态注意浏览器上下文正成为新入口thevergecom月日",
-  "date": "2026-10-15"
- },
- {
-  "norm": "八个州起诉openai称chatgpt对儿童不安全背景监管压力与产品扩张同步升级thevergecom月日",
-  "date": "2026-10-15"
- },
- {
   "norm": "anthropic研究揭示claude对ecdsa曲线参数来源的发现登hn首页获738分值得看密码学与模型推理的交叉anthropiccom月日",
   "date": "2026-10-16"
  },
@@ -202,5 +186,13 @@
  {
   "norm": "mistral发布mistrallarge4开放权重值得看头部厂商继续押注开源mistralai",
   "date": "2026-10-29"
+ },
+ {
+  "norm": "claudecode的vscode扩展被曝在cursormarketplace存在后门注意开发者工具供应链风险artificialanalysisai月日",
+  "date": "2026-10-30"
+ },
+ {
+  "norm": "ai领域曝出重大纷争具体模型信息未披露信号头部竞争摩擦升温artificialanalysisai月日",
+  "date": "2026-10-30"
  }
 ]
