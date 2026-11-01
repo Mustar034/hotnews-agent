@@ -1,21 +1,5 @@
 [
  {
-  "norm": "anthropic研究揭示claude对ecdsa曲线参数来源的发现登hn首页获738分值得看密码学与模型推理的交叉anthropiccom月日",
-  "date": "2026-10-16"
- },
- {
-  "norm": "applemlresearch发布musespark支持macstudio上通过mlx分布式推理信号本地分布式推理再进一步machinelearningapplecom",
-  "date": "2026-10-16"
- },
- {
-  "norm": "mercor研究称美国90工作时长用于ai基准覆盖不足的任务注意评测基准存在盲区mercorcom",
-  "date": "2026-10-16"
- },
- {
-  "norm": "50年从业经历的广播人撰文介绍家中为ai部署的硬件配置背景个体算力自建样本pageslaportecloud月日",
-  "date": "2026-10-16"
- },
- {
   "norm": "deepseek在huggingface发布deepseekv41flash1017模型值得看新模型落地huggingfaceco月日",
   "date": "2026-10-17"
  },
@@ -194,5 +178,17 @@
  {
   "norm": "ai领域曝出重大纷争具体模型信息未披露信号头部竞争摩擦升温artificialanalysisai月日",
   "date": "2026-10-30"
+ },
+ {
+  "norm": "月日altman称openai在数学领域的推进不会停止值得看数学能力竞赛继续加码thevergecom月日",
+  "date": "2026-10-31"
+ },
+ {
+  "norm": "月日claude被用户报告会阻止视频游戏克隆与逆向工程任务信号模型安全策略向开发场景收紧tomshardwarecom月日",
+  "date": "2026-10-31"
+ },
+ {
+  "norm": "karpathy发布基于hn推荐视频构建的hackertube项目值得看开发者工具仍活跃thevergecom",
+  "date": "2026-10-31"
  }
 ]
