@@ -1,17 +1,5 @@
 [
  {
-  "norm": "deepseek上线搜索与抓取api每1000次成功请求收费075美元信号检索能力正被做成基础设施apidocsdeepseekcom",
-  "date": "2026-10-18"
- },
- {
-  "norm": "arxiv论文提出hybridreasoningagents让llm智能体在潜空间思考通过文本行动值得看推理与行动解耦的新范式arxivorg月日",
-  "date": "2026-10-18"
- },
- {
-  "norm": "anthropic提出ai安全法案仅在造成50人死亡或10亿美元损失时触发注意监管触发门槛引发争议tomshardwarecom月日",
-  "date": "2026-10-18"
- },
- {
   "norm": "mistral发布时序基础模型timestralhn热度565值得看时序赛道迎来基础模型玩家mistralai月日",
   "date": "2026-10-19"
  },
@@ -178,5 +166,13 @@
  {
   "norm": "minecraft中50个aiagent组队建文明失败陷入官僚式内耗信号多智能体协作仍难过组织关tomshardwarecom月日",
   "date": "2026-11-01"
+ },
+ {
+  "norm": "anthropic确认claudecode新增限制阻止逆向工程与游戏克隆opus55亦主动拦截信号模型厂商开始收紧代码生成边界tomshardwarecom月日",
+  "date": "2026-11-02"
+ },
+ {
+  "norm": "astra通过读写权重空间改进qwen模型相关讨论在hn获2305分值得看权重层面操控的新思路rikiyatgithubio月日",
+  "date": "2026-11-02"
  }
 ]
