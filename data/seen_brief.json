@@ -1,21 +1,5 @@
 [
  {
-  "norm": "mistral发布时序基础模型timestralhn热度565值得看时序赛道迎来基础模型玩家mistralai月日",
-  "date": "2026-10-19"
- },
- {
-  "norm": "ssrn论文doesartificialintelligencedemocratizescienceevidencefromalphafold探讨alphafold对科学民主化的影响信号ai科研社会效应进入实证阶段papersssrncom月日",
-  "date": "2026-10-19"
- },
- {
-  "norm": "norforge博客介绍cairn称其打开ai驱动网络操作的窗口注意ai网络操作工具化在加速norforgecom月日",
-  "date": "2026-10-19"
- },
- {
-  "norm": "路透社报道黑客用ai智能体花费数千美元入侵约100个网站注意智能体滥用已从概念走向实操reuterscom月日",
-  "date": "2026-10-19"
- },
- {
   "norm": "deepseek开源高性能推理框架deepinfer值得看推理层开源热度极高githubcommistralai",
   "date": "2026-10-20"
  },
@@ -174,5 +158,13 @@
  {
   "norm": "astra通过读写权重空间改进qwen模型相关讨论在hn获2305分值得看权重层面操控的新思路rikiyatgithubio月日",
   "date": "2026-11-02"
+ },
+ {
+  "norm": "有文章澄清astra能读写权重以改进qwen说法具有误导性属未经证实传闻注意权重解读主张需谨慎对待tomshardwarecom月日",
+  "date": "2026-11-03"
+ },
+ {
+  "norm": "simonwillison实测qwen3827b可在笔记本本地运行并解读模型权重信号本地推理与可解释性实践推进simonwillisonnet月日",
+  "date": "2026-11-03"
  }
 ]
