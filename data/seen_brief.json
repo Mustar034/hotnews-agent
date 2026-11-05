@@ -1,21 +1,5 @@
 [
  {
-  "norm": "deepseek开源高性能推理框架deepinfer值得看推理层开源热度极高githubcommistralai",
-  "date": "2026-10-20"
- },
- {
-  "norm": "mistral发布voxtral3信号语音模型赛道再添新品mistralaigithubcom",
-  "date": "2026-10-20"
- },
- {
-  "norm": "月日ssrn论文探讨alphafold对科学民主化的影响背景ai科研效应进入实证阶段githubcommistralai",
-  "date": "2026-10-20"
- },
- {
-  "norm": "月日报道黑客借ai代理与数千美元成本入侵约百个网站注意ai代理攻击成本已极低githubcommistralai",
-  "date": "2026-10-20"
- },
- {
   "norm": "月日dnb工作论文讨论ai新闻冲击的宏观经济效应与国际溢出值得看ai经济影响正被央行系统研究dnbnl月日",
   "date": "2026-10-21"
  },
@@ -166,5 +150,29 @@
  {
   "norm": "simonwillison实测qwen3827b可在笔记本本地运行并解读模型权重信号本地推理与可解释性实践推进simonwillisonnet月日",
   "date": "2026-11-03"
+ },
+ {
+  "norm": "openai将数据中心更名为computecampuses强化算力基建叙事值得看命名即战略thevergecom月日",
+  "date": "2026-11-04"
+ },
+ {
+  "norm": "nvidiartxspark加密固件致linux推理速度降至35注意硬件生态摩擦mindstudioai月日",
+  "date": "2026-11-04"
+ },
+ {
+  "norm": "iea发布poweringartificialintelligence报告聚焦ai算力与能源信号能耗成硬约束mindstudioai月日",
+  "date": "2026-11-04"
+ },
+ {
+  "norm": "ikea将8500名呼叫坐席转型为设计顾问ai应用落地背景岗位重构先行mindstudioai月日",
+  "date": "2026-11-04"
+ },
+ {
+  "norm": "美科技巨头隐性ai债务半年增90至32万亿美元注意算力融资风险thevergecom月日",
+  "date": "2026-11-04"
+ },
+ {
+  "norm": "用户称gemini在个人订阅下仍用聊天历史训练模型注意隐私口径待证实thevergecom月日",
+  "date": "2026-11-04"
  }
 ]
