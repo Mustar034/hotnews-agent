@@ -1,21 +1,5 @@
 [
  {
-  "norm": "微型脑类器官阅读盲文被视为迈向生物混合计算的关键一步值得看前沿计算范式的新探索frontiersinorg月日",
-  "date": "2026-10-22"
- },
- {
-  "norm": "github项目adi提出面向家电的嵌入式智能方案属工程性项目信号智能向边缘设备下沉project507substackcom月日",
-  "date": "2026-10-22"
- },
- {
-  "norm": "数据中心污染上升可能抵消数十年空气质量改善成果注意算力基础设施的环境代价thevergecom月日",
-  "date": "2026-10-22"
- },
- {
-  "norm": "substack文章讨论人工智能的五种感官属概念性讨论背景未涉及具体模型或算法突破project507substackcom月日",
-  "date": "2026-10-22"
- },
- {
   "norm": "canva发布首个自研ai图像模型生成前先规划设计方案值得看设计工具向模型层上探thevergecom月日",
   "date": "2026-10-23"
  },
@@ -174,5 +158,9 @@
  {
   "norm": "claudecode被曝向网站发送用户邮箱地址相关githubissue获高关注注意开发者工具隐私风险githubcom",
   "date": "2026-11-05"
+ },
+ {
+  "norm": "hightouch发布llm评判器jev可向opus求助身份解析任务以约4倍更低成本达到opus准确率信号低成本逼近强模型hightouchcom月日",
+  "date": "2026-11-06"
  }
 ]
