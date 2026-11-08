@@ -1,17 +1,5 @@
 [
  {
-  "norm": "canva发布首个自研ai图像模型生成前先规划设计方案值得看设计工具向模型层上探thevergecom月日",
-  "date": "2026-10-23"
- },
- {
-  "norm": "kimi发布k31pro与k31prohighspeed热度高但未披露成本细节信号推理效率仍是竞争焦点frontiersinorg月日",
-  "date": "2026-10-23"
- },
- {
-  "norm": "showhn出现kavelaai自动化工具主打失败时不静默注意可靠性正成为卖点kavelaai月日",
-  "date": "2026-10-23"
- },
- {
   "norm": "kavela在hackernews发布ai自动化工具宣称不会静默失败信号小团队切入可靠性痛点kavelaai月日",
   "date": "2026-10-24"
  },
@@ -162,5 +150,21 @@
  {
   "norm": "hightouch发布llm评判器jev可向opus求助身份解析任务以约4倍更低成本达到opus准确率信号低成本逼近强模型hightouchcom月日",
   "date": "2026-11-06"
+ },
+ {
+  "norm": "google称用户已无法在不使用ai的情况下使用搜索属产品层面ai集成表态信号搜索全面ai化thevergecom月日",
+  "date": "2026-11-07"
+ },
+ {
+  "norm": "微软研究院aifrontiers团队被曝结束属研究组织变动注意研究布局收缩hunchnet月日",
+  "date": "2026-11-07"
+ },
+ {
+  "norm": "有文章讨论在10美元openstick上运行家庭实验室配置涉及低成本本地部署实践值得看极低成本homelabblogbosscherch月日",
+  "date": "2026-11-07"
+ },
+ {
+  "norm": "有文章称每台mac内置未公开的家人识别分类器属本地设备端ai能力注意端侧ai未公开能力blogbosscherch月日",
+  "date": "2026-11-07"
  }
 ]
