@@ -1,13 +1,5 @@
 [
  {
-  "norm": "kavela在hackernews发布ai自动化工具宣称不会静默失败信号小团队切入可靠性痛点kavelaai月日",
-  "date": "2026-10-24"
- },
- {
-  "norm": "theverge报道称claude并未发明蝎子抗毒血清涉及vibecoding传闻注意未经证实细节需谨慎thevergecom月日",
-  "date": "2026-10-24"
- },
- {
   "norm": "一项已有10年历史的cnn在皮肤癌诊断上优于前沿大语言模型值得看老模型在垂直任务上仍能打lynchlabnet",
   "date": "2026-10-25"
  },
@@ -166,5 +158,17 @@
  {
   "norm": "有文章称每台mac内置未公开的家人识别分类器属本地设备端ai能力注意端侧ai未公开能力blogbosscherch月日",
   "date": "2026-11-07"
+ },
+ {
+  "norm": "github项目llamamodchip实现284b参数deepseek模型在64gb内存无gpu环境下运行值得看本地推理效率的极限压榨githubcom月日",
+  "date": "2026-11-08"
+ },
+ {
+  "norm": "高盛正从其银行家和交易员处撤下claudecode信号头部机构对ai编程工具的部署出现回撤githubcom月日",
+  "date": "2026-11-08"
+ },
+ {
+  "norm": "卫报报道google称使用搜索无法绕开人工智能注意搜索产品的ai集成已不可回避githubcom月日",
+  "date": "2026-11-08"
  }
 ]
