@@ -1,17 +1,5 @@
 [
  {
-  "norm": "一项已有10年历史的cnn在皮肤癌诊断上优于前沿大语言模型值得看老模型在垂直任务上仍能打lynchlabnet",
-  "date": "2026-10-25"
- },
- {
-  "norm": "ropensource版块禁止ai相关内容及非英语使用者信号开源社区治理争议升温thevergecom月日",
-  "date": "2026-10-25"
- },
- {
-  "norm": "科技公司借助宗教理念塑造ai道德涉及anthropic背景ai伦理讨论持续升温thevergecom月日",
-  "date": "2026-10-25"
- },
- {
   "norm": "openai发布预印本论文称指数时间假设不成立pdf托管于github值得看理论计算机科学的大胆挑战githubcom月日",
   "date": "2026-10-26"
  },
@@ -170,5 +158,9 @@
  {
   "norm": "卫报报道google称使用搜索无法绕开人工智能注意搜索产品的ai集成已不可回避githubcom月日",
   "date": "2026-11-08"
+ },
+ {
+  "norm": "月日anthropic发布新模型claudefable与mythos52值得看官方与媒体报道同步落地thevergecomanthropiccom月日",
+  "date": "2026-11-09"
  }
 ]
