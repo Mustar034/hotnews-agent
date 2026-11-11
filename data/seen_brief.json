@@ -1,29 +1,5 @@
 [
  {
-  "norm": "openai发布预印本论文称指数时间假设不成立pdf托管于github值得看理论计算机科学的大胆挑战githubcom月日",
-  "date": "2026-10-26"
- },
- {
-  "norm": "openai发文介绍数学计算机科学与物理学领域三项新发现信号基础研究正成为模型厂商新战场openaicom月日",
-  "date": "2026-10-26"
- },
- {
-  "norm": "openai发布新模型gpt61terra值得看新模型发布节奏明显加快openaicom月日",
-  "date": "2026-10-26"
- },
- {
-  "norm": "sebastianraschka发布从零构建推理模型的视频课程值得看推理模型开发门槛在降低magazinesebastianraschkacom月日",
-  "date": "2026-10-26"
- },
- {
-  "norm": "reddit开源社区封禁ai相关项目及非英语用户注意开源社区对ai内容态度趋紧tomshardwarecom",
-  "date": "2026-10-26"
- },
- {
-  "norm": "科技公司转向宗教以让ai道德良善背景ai伦理探索出现非常规路径thevergecom",
-  "date": "2026-10-26"
- },
- {
   "norm": "deepmind发布新一代世界模拟模型genie4值得看世界模型赛道再加速deepmindgoogle月日",
   "date": "2026-10-27"
  },
@@ -162,5 +138,13 @@
  {
   "norm": "月日anthropic发布新模型claudefable与mythos52值得看官方与媒体报道同步落地thevergecomanthropiccom月日",
   "date": "2026-11-09"
+ },
+ {
+  "norm": "deepmind发布alphaproofcode相关介绍信号代码与形式化证明继续融合deepmindgoogle月日",
+  "date": "2026-11-10"
+ },
+ {
+  "norm": "amazon称用strandsdecider替代sonnet46节省数百万成本注意效果数据为博客自述未经独立证实thevergecom月日",
+  "date": "2026-11-10"
  }
 ]
