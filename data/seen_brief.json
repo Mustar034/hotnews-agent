@@ -1,13 +1,5 @@
 [
  {
-  "norm": "deepmind发布新一代世界模拟模型genie4值得看世界模型赛道再加速deepmindgoogle月日",
-  "date": "2026-10-27"
- },
- {
-  "norm": "亚马逊持续失败后裁撤ai部门涉及nova注意大厂ai收缩信号deepmindgoogle月日",
-  "date": "2026-10-27"
- },
- {
   "norm": "artificialanalysis发布intelligenceindexv5并更新评测方法论值得看基准迭代提速artificialanalysisai月日",
   "date": "2026-10-28"
  },
@@ -146,5 +138,17 @@
  {
   "norm": "amazon称用strandsdecider替代sonnet46节省数百万成本注意效果数据为博客自述未经独立证实thevergecom月日",
   "date": "2026-11-10"
+ },
+ {
+  "norm": "perplexity推出面向工作场景的自有ai智能体产品teammates值得看头部公司押注工作智能体thevergecom月日",
+  "date": "2026-11-11"
+ },
+ {
+  "norm": "有文章提出为智能体保留决策依据以改进决策信号智能体可解释性成方法焦点iprogrammerinfo月日",
+  "date": "2026-11-11"
+ },
+ {
+  "norm": "宾夕法尼亚州颁布人工智能欺骗性广告法注意属监管政策非技术进展insideprivacycom月日",
+  "date": "2026-11-11"
  }
 ]
