@@ -1,9 +1,5 @@
 [
  {
-  "norm": "mistral发布mistrallarge4开放权重值得看头部厂商继续押注开源mistralai",
-  "date": "2026-10-29"
- },
- {
   "norm": "claudecode的vscode扩展被曝在cursormarketplace存在后门注意开发者工具供应链风险artificialanalysisai月日",
   "date": "2026-10-30"
  },
@@ -150,5 +146,25 @@
  {
   "norm": "nist就ai用于网络安全框架20分析报告公开征求意见注意ai合规应用在推进nistgov月日",
   "date": "2026-11-12"
+ },
+ {
+  "norm": "claude服务出现错误率升高涉及claudeaiclaudecode与platformclaudecom注意平台可用性事件非模型发布statusclaudecom月日",
+  "date": "2026-11-13"
+ },
+ {
+  "norm": "有报道称ai帮助解锁哥德尔笔记据称含数百条已证明定理信号ai辅助科研发现引关注theguardiancom月日",
+  "date": "2026-11-13"
+ },
+ {
+  "norm": "有文章批评在反思之外使用llm是一种反模式值得看llm用法边界之争newsycombinatorcom月日",
+  "date": "2026-11-13"
+ },
+ {
+  "norm": "有报道澄清ai智能体并未发现此前未知的玛雅遗址注意纠偏类报道非技术突破newsycombinatorcom月日",
+  "date": "2026-11-13"
+ },
+ {
+  "norm": "artificialintelligenceforthez80值得看复古硬件上的ai尝试dfsantoscom",
+  "date": "2026-11-13"
  }
 ]
