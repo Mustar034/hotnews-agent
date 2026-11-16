@@ -1,17 +1,5 @@
 [
  {
-  "norm": "月日altman称openai在数学领域的推进不会停止值得看数学能力竞赛继续加码thevergecom月日",
-  "date": "2026-10-31"
- },
- {
-  "norm": "月日claude被用户报告会阻止视频游戏克隆与逆向工程任务信号模型安全策略向开发场景收紧tomshardwarecom月日",
-  "date": "2026-10-31"
- },
- {
-  "norm": "karpathy发布基于hn推荐视频构建的hackertube项目值得看开发者工具仍活跃thevergecom",
-  "date": "2026-10-31"
- },
- {
   "norm": "minecraft中50个aiagent组队建文明失败陷入官僚式内耗信号多智能体协作仍难过组织关tomshardwarecom月日",
   "date": "2026-11-01"
  },
@@ -182,5 +170,21 @@
  {
   "norm": "报道称英伟达通过循环融资交易刻意维持gpu高价注意传闻未经证实techspotcom月日",
   "date": "2026-11-14"
+ },
+ {
+  "norm": "qwen4max发布值得看新模型动态qwenai月日",
+  "date": "2026-11-15"
+ },
+ {
+  "norm": "claude被要求重新编号页面时误删法学教授整年讲义注意产品可靠性风险thevergecom月日",
+  "date": "2026-11-15"
+ },
+ {
+  "norm": "报道称约15gw被禁nvidiaai芯片走私至中国信号出口管制承压tomshardwarecom月日",
+  "date": "2026-11-15"
+ },
+ {
+  "norm": "美国国会因nvidia间谍丑闻寻求收紧ai芯片出口规则背景监管持续加码thevergecom月日",
+  "date": "2026-11-15"
  }
 ]
