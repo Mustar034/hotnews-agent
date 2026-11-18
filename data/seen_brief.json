@@ -1,13 +1,5 @@
 [
  {
-  "norm": "anthropic确认claudecode新增限制阻止逆向工程与游戏克隆opus55亦主动拦截信号模型厂商开始收紧代码生成边界tomshardwarecom月日",
-  "date": "2026-11-02"
- },
- {
-  "norm": "astra通过读写权重空间改进qwen模型相关讨论在hn获2305分值得看权重层面操控的新思路rikiyatgithubio月日",
-  "date": "2026-11-02"
- },
- {
   "norm": "有文章澄清astra能读写权重以改进qwen说法具有误导性属未经证实传闻注意权重解读主张需谨慎对待tomshardwarecom月日",
   "date": "2026-11-03"
  },
@@ -186,5 +178,9 @@
  {
   "norm": "fable52仅用96kb与40行提示词在浏览器生成水下世界180fps运行值得看轻量生成式前端演示tomshardwarecom月日",
   "date": "2026-11-16"
+ },
+ {
+  "norm": "月日anthropic称claudemythos将amdgpu软件适配从最长12个月缩短至约3天几乎100自主编写内核值得看cuda护城河被撬动tomshardwarecom月日",
+  "date": "2026-11-17"
  }
 ]
