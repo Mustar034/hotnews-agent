@@ -1,13 +1,5 @@
 [
  {
-  "norm": "有文章澄清astra能读写权重以改进qwen说法具有误导性属未经证实传闻注意权重解读主张需谨慎对待tomshardwarecom月日",
-  "date": "2026-11-03"
- },
- {
-  "norm": "simonwillison实测qwen3827b可在笔记本本地运行并解读模型权重信号本地推理与可解释性实践推进simonwillisonnet月日",
-  "date": "2026-11-03"
- },
- {
   "norm": "openai将数据中心更名为computecampuses强化算力基建叙事值得看命名即战略thevergecom月日",
   "date": "2026-11-04"
  },
@@ -182,5 +174,17 @@
  {
   "norm": "月日anthropic称claudemythos将amdgpu软件适配从最长12个月缩短至约3天几乎100自主编写内核值得看cuda护城河被撬动tomshardwarecom月日",
   "date": "2026-11-17"
+ },
+ {
+  "norm": "google发布gemini4neon模型值得看头部模型迭代节奏未放缓bloggoogle月日",
+  "date": "2026-11-18"
+ },
+ {
+  "norm": "微软在ignite2026发布七款新模型主打可扩展性价比信号以价格性能比抢开发者microsoftai月日",
+  "date": "2026-11-18"
+ },
+ {
+  "norm": "审计试验显示ai智能体比kpmg会计师提出更好的问题注意专业服务场景验证仍在早期bloggoogle月日",
+  "date": "2026-11-18"
  }
 ]
