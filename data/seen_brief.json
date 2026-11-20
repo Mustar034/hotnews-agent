@@ -1,29 +1,5 @@
 [
  {
-  "norm": "openai将数据中心更名为computecampuses强化算力基建叙事值得看命名即战略thevergecom月日",
-  "date": "2026-11-04"
- },
- {
-  "norm": "nvidiartxspark加密固件致linux推理速度降至35注意硬件生态摩擦mindstudioai月日",
-  "date": "2026-11-04"
- },
- {
-  "norm": "iea发布poweringartificialintelligence报告聚焦ai算力与能源信号能耗成硬约束mindstudioai月日",
-  "date": "2026-11-04"
- },
- {
-  "norm": "ikea将8500名呼叫坐席转型为设计顾问ai应用落地背景岗位重构先行mindstudioai月日",
-  "date": "2026-11-04"
- },
- {
-  "norm": "美科技巨头隐性ai债务半年增90至32万亿美元注意算力融资风险thevergecom月日",
-  "date": "2026-11-04"
- },
- {
-  "norm": "用户称gemini在个人订阅下仍用聊天历史训练模型注意隐私口径待证实thevergecom月日",
-  "date": "2026-11-04"
- },
- {
   "norm": "美国司法部据报就英伟达130亿美元收购huggingface展开调查关注ai竞争与客户压力值得看监管紧盯ai并购tomshardwarecom月日",
   "date": "2026-11-05"
  },
@@ -186,5 +162,29 @@
  {
   "norm": "审计试验显示ai智能体比kpmg会计师提出更好的问题注意专业服务场景验证仍在早期bloggoogle月日",
   "date": "2026-11-18"
+ },
+ {
+  "norm": "anthropic月日在纳斯达克完成历史性上市成华尔街检验ai前景与风险的重要事件值得看ai公司资本化进入新阶段reuterscom月日",
+  "date": "2026-11-19"
+ },
+ {
+  "norm": "全美最大几个学区考虑弃用googlesearch涉及google产品在教育市场的动向信号教育市场对科技巨头信任松动reuterscom月日",
+  "date": "2026-11-19"
+ },
+ {
+  "norm": "canva新增aioff按钮允许用户关闭ai功能注意非头部厂商以ai可控性做差异化reuterscom月日",
+  "date": "2026-11-19"
+ },
+ {
+  "norm": "stanfordai100发布2026报告持续追踪人工智能长期影响背景百年研究项目进入新周期ai100stanfordedu",
+  "date": "2026-11-19"
+ },
+ {
+  "norm": "stanfordai100同步发布ai词汇概念表统一术语与概念表述值得看为跨学科讨论提供基础工具ai100stanfordedu",
+  "date": "2026-11-19"
+ },
+ {
+  "norm": "stanfordai100发布人工智能与科学知识生产研究聚焦ai对科研的影响信号ai正被纳入科研方法论讨论ai100stanfordedu",
+  "date": "2026-11-19"
  }
 ]
