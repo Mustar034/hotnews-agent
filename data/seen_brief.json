@@ -1,21 +1,5 @@
 [
  {
-  "norm": "美国司法部据报就英伟达130亿美元收购huggingface展开调查关注ai竞争与客户压力值得看监管紧盯ai并购tomshardwarecom月日",
-  "date": "2026-11-05"
- },
- {
-  "norm": "亚马逊要求工程师停止为显得高产而tokenmaxxing称ai是开发核心但用量非目标信号大厂纠偏ai用量指标tomshardwarecom月日",
-  "date": "2026-11-05"
- },
- {
-  "norm": "日本承包商的ai引导隧道掘进表现优于人工操作员值得看ai落地传统工程场景tomshardwarecom月日",
-  "date": "2026-11-05"
- },
- {
-  "norm": "claudecode被曝向网站发送用户邮箱地址相关githubissue获高关注注意开发者工具隐私风险githubcom",
-  "date": "2026-11-05"
- },
- {
   "norm": "hightouch发布llm评判器jev可向opus求助身份解析任务以约4倍更低成本达到opus准确率信号低成本逼近强模型hightouchcom月日",
   "date": "2026-11-06"
  },
@@ -186,5 +170,25 @@
  {
   "norm": "stanfordai100发布人工智能与科学知识生产研究聚焦ai对科研的影响信号ai正被纳入科研方法论讨论ai100stanfordedu",
   "date": "2026-11-19"
+ },
+ {
+  "norm": "thinkingmachines发布新模型inkling2minihn871分160评值得看本期唯一明确的新模型发布thinkingmachinesai月日",
+  "date": "2026-11-20"
+ },
+ {
+  "norm": "signal阻止geminisiri等ai助手读取用户屏幕内容信号移动端ai权限收紧thevergecom月日",
+  "date": "2026-11-20"
+ },
+ {
+  "norm": "斯坦福ai100发布2026年度报告评估ai长期趋势背景非模型或基准发布ai100stanfordedu月日",
+  "date": "2026-11-20"
+ },
+ {
+  "norm": "1985年commodore64人工智能项目资料存档可查值得看老硬件上的ai考古archiveorg",
+  "date": "2026-11-20"
+ },
+ {
+  "norm": "一份人工智能词汇与概念术语表可供查阅背景基础参考资料archiveorg",
+  "date": "2026-11-20"
  }
 ]
