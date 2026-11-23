@@ -1,21 +1,5 @@
 [
  {
-  "norm": "google称用户已无法在不使用ai的情况下使用搜索属产品层面ai集成表态信号搜索全面ai化thevergecom月日",
-  "date": "2026-11-07"
- },
- {
-  "norm": "微软研究院aifrontiers团队被曝结束属研究组织变动注意研究布局收缩hunchnet月日",
-  "date": "2026-11-07"
- },
- {
-  "norm": "有文章讨论在10美元openstick上运行家庭实验室配置涉及低成本本地部署实践值得看极低成本homelabblogbosscherch月日",
-  "date": "2026-11-07"
- },
- {
-  "norm": "有文章称每台mac内置未公开的家人识别分类器属本地设备端ai能力注意端侧ai未公开能力blogbosscherch月日",
-  "date": "2026-11-07"
- },
- {
   "norm": "github项目llamamodchip实现284b参数deepseek模型在64gb内存无gpu环境下运行值得看本地推理效率的极限压榨githubcom月日",
   "date": "2026-11-08"
  },
@@ -202,5 +186,17 @@
  {
   "norm": "有研究者在论文中隐藏ai提示词诱导审稿人给出仅正面评价注意学术评审环节出现提示词注入thevergecom月日",
   "date": "2026-11-21"
+ },
+ {
+  "norm": "openai官网发布perplexityandintelligencehn获550分374条评论值得看头部实验室再谈模型能力本质openaicom月日",
+  "date": "2026-11-22"
+ },
+ {
+  "norm": "面向初学者的本地ai指南在hn获405分涉及inklingqwen与unsloth本地推理实践信号本地推理仍是开发者热点gpupartnercom月日",
+  "date": "2026-11-22"
+ },
+ {
+  "norm": "研究人员被曝在论文中隐藏ai提示词以索取仅正面评审属学术评审操纵现象注意ai介入评审的诚信风险asianikkeicom月日",
+  "date": "2026-11-22"
  }
 ]
