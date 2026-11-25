@@ -1,9 +1,5 @@
 [
  {
-  "norm": "月日anthropic发布新模型claudefable与mythos52值得看官方与媒体报道同步落地thevergecomanthropiccom月日",
-  "date": "2026-11-09"
- },
- {
   "norm": "deepmind发布alphaproofcode相关介绍信号代码与形式化证明继续融合deepmindgoogle月日",
   "date": "2026-11-10"
  },
@@ -206,5 +202,21 @@
  {
   "norm": "lecun在推特指责darioamodei夸大ai危险以推动开源模型非法化信号开源路线之争再起口水thevergecom月日",
   "date": "2026-11-23"
+ },
+ {
+  "norm": "openai发布预印本论证矩阵乘法指数为94值得看算法理论级突破信号githubcom月日",
+  "date": "2026-11-24"
+ },
+ {
+  "norm": "prismml发布ternarybonsai2527b三值量化模型主打推理效率信号模型压缩路线持续升温prismmlcom月日",
+  "date": "2026-11-24"
+ },
+ {
+  "norm": "anthropic盘前跌破83美元ipo发行价注意ai头部公司估值承压bloombergcom月日",
+  "date": "2026-11-24"
+ },
+ {
+  "norm": "报道称纽约时报警告摄影师勿因ai功能更新photoshop注意工具链更新风险外溢prismmlcom月日",
+  "date": "2026-11-24"
  }
 ]
