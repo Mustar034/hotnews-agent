@@ -1,13 +1,5 @@
 [
  {
-  "norm": "deepmind发布alphaproofcode相关介绍信号代码与形式化证明继续融合deepmindgoogle月日",
-  "date": "2026-11-10"
- },
- {
-  "norm": "amazon称用strandsdecider替代sonnet46节省数百万成本注意效果数据为博客自述未经独立证实thevergecom月日",
-  "date": "2026-11-10"
- },
- {
   "norm": "perplexity推出面向工作场景的自有ai智能体产品teammates值得看头部公司押注工作智能体thevergecom月日",
   "date": "2026-11-11"
  },
@@ -218,5 +210,17 @@
  {
   "norm": "报道称纽约时报警告摄影师勿因ai功能更新photoshop注意工具链更新风险外溢prismmlcom月日",
   "date": "2026-11-24"
+ },
+ {
+  "norm": "googleresearch在github发布cogentic系列论文涉及整数分解离散对数等方向值得看数学与ai交叉的正式产出githubcom月日",
+  "date": "2026-11-25"
+ },
+ {
+  "norm": "anthropic相关的grhlean形式化验证精简版本出现在github信号形式化验证正被ai团队推进githubcom月日",
+  "date": "2026-11-25"
+ },
+ {
+  "norm": "reddit流传openai或anthropic可能实现多项式时间整数分解未经证实注意仅为社区传闻勿当结论redditcom月日",
+  "date": "2026-11-25"
  }
 ]
