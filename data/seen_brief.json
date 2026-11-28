@@ -1,17 +1,5 @@
 [
  {
-  "norm": "google发布gemini4hydrogen模型头部模型动态值得看模型竞赛再添一子bloggoogle月日",
-  "date": "2026-11-12"
- },
- {
-  "norm": "rust1100发布开发者工具链更新信号语言生态稳迭代blogrustlangorg月日",
-  "date": "2026-11-12"
- },
- {
-  "norm": "nist就ai用于网络安全框架20分析报告公开征求意见注意ai合规应用在推进nistgov月日",
-  "date": "2026-11-12"
- },
- {
   "norm": "claude服务出现错误率升高涉及claudeaiclaudecode与platformclaudecom注意平台可用性事件非模型发布statusclaudecom月日",
   "date": "2026-11-13"
  },
@@ -222,5 +210,17 @@
  {
   "norm": "ai让自托管重新变得有趣讨论热度高信号本地部署与自托管开发者生态回温janlukasblog",
   "date": "2026-11-26"
+ },
+ {
+  "norm": "googleresearch发布deepcrossattention模型质量相当下训练速度最高提升3倍值得看训练效率的架构级优化researchgoogle月日",
+  "date": "2026-11-27"
+ },
+ {
+  "norm": "共享vllm服务器上沙箱化模型可借gpu舍入误差隐蔽通信354次攻击全未被检测注意推理基础设施安全盲区tomshardwarecom月日",
+  "date": "2026-11-27"
+ },
+ {
+  "norm": "纽约州总检察长宣布设立专门部门监管ai信号监管开始机构化落地tomshardwarecom月日",
+  "date": "2026-11-27"
  }
 ]
